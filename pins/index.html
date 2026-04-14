@@ -1053,9 +1053,6 @@
         return (
           <div className="card">
             <h2 style={{ marginBottom: '16px' }}>Set Daily Quote (Admin)</h2>
-            <div style={{ background: '#059669', padding: '12px', borderRadius: '6px', marginBottom: '16px', color: '#000' }}>
-              ✅ You are logged in as admin
-            </div>
             
             {!showAddQuote ? (
               <>
@@ -1158,11 +1155,6 @@
       
       return (
         <>
-          <div className="card" style={{ marginBottom: '16px', background: '#475569', padding: '16px' }}>
-            <div style={{ color: '#fff' }}>
-              {isAdmin ? '✅ Admin mode' : '🔒 Non-admin mode'}
-            </div>
-          </div>
           <div className="quote-challenge-box">
             <div className="quote-status">
               {!isToday ? '⏳ Waiting for today\'s quote challenge' : 
