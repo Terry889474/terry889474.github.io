@@ -495,11 +495,11 @@
     };
     
     const ASSISTANT_DUTIES = [
-      { id: 'roll-call', text: 'Morning Roll Call - Check all badges', penalty: 10 },
-      { id: 'tally', text: 'Keep running tally of fines during day', penalty: 10 },
-      { id: 'photos', text: 'Ensure violation photos posted to WhatsApp', penalty: 10 },
-      { id: 'summary', text: 'Read daily summary at dinner', penalty: 10 },
-      { id: 'rituals', text: 'Lead humiliation rituals', penalty: 10 }
+      { id: 'roll-call', text: 'Morning Roll Call - Check all badges', penalty: 5 },
+      { id: 'tally', text: 'Keep running tally of fines during day', penalty: 5 },
+      { id: 'photos', text: 'Ensure violation photos posted to WhatsApp', penalty: 5 },
+      { id: 'summary', text: 'Read daily summary at dinner', penalty: 5 },
+      { id: 'rituals', text: 'Lead humiliation rituals', penalty: 5 }
     ];
     
     const DEFAULT_QUOTES = [
@@ -1241,7 +1241,7 @@
           </div>
           
           <div className="duty-checklist">
-            <h3 style={{ marginBottom: '12px' }}>Daily Duties (€10 fine each if missed)</h3>
+            <h3 style={{ marginBottom: '12px' }}>Daily Duties (€5 fine each if missed)</h3>
             {ASSISTANT_DUTIES.map(duty => (
               <div key={duty.id} className={`duty-item ${completedDuties[duty.id] ? 'checked' : ''}`}>
                 <input 
