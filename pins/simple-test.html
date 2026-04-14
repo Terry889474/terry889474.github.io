@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Test</title>
+  <style>
+    body { background: #0f172a; color: white; padding: 20px; font-family: sans-serif; }
+    .ok { background: #059669; padding: 10px; margin: 5px 0; border-radius: 5px; }
+    .error { background: #dc2626; padding: 10px; margin: 5px 0; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Loading Test</h1>
+  <div id="status">Starting...</div>
+  
+  <script>
+    window.onerror = function(msg, url, line) {
+      document.getElementById('status').innerHTML += '<div class="error">JS ERROR: ' + msg + ' (line ' + line + ')</div>';
+    };
+    
+    document.getElementById('status').innerHTML = '<div class="ok">✅ Basic HTML/JS works</div>';
+  </script>
+  
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script>
+    if (typeof React !== 'undefined') {
+      document.getElementById('status').innerHTML += '<div class="ok">✅ React loaded</div>';
+    } else {
+      document.getElementById('status').innerHTML += '<div class="error">❌ React failed</div>';
+    }
+  </script>
+  
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script>
+    if (typeof ReactDOM !== 'undefined') {
+      document.getElementById('status').innerHTML += '<div class="ok">✅ ReactDOM loaded</div>';
+    }
+    if (typeof Babel !== 'undefined') {
+      document.getElementById('status').innerHTML += '<div class="ok">✅ Babel loaded</div>';
+    }
+  </script>
+  
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    try {
+      const { useState } = React;
+      
+      function TestApp() {
+        const [count, setCount] = useState(0);
+        return (
+          <div style={{background: '#7c3aed', padding: '20px', marginTop: '20px', borderRadius: '8px'}}>
+            <h2>✅ React Component Rendering!</h2>
+            <button onClick={() => setCount(count + 1)} style={{padding: '10px 20px', fontSize: '16px'}}>
+              Clicked {count} times
+            </button>
+          </div>
+        );
+      }
+      
+      ReactDOM.render(<TestApp />, document.getElementById('root'));
+      document.getElementById('status').innerHTML += '<div class="ok">✅ React component rendered</div>';
+    } catch (error) {
+      document.getElementById('status').innerHTML += '<div class="error">❌ React render error: ' + error.message + '</div>';
+    }
+  </script>
+</body>
+</html>
