@@ -863,12 +863,11 @@
       );
     }
     
-    function QuoteTab({ dailyQuote, riders }) {
+    function QuoteTab({ dailyQuote, riders, isAdmin }) {
       const [myName, setMyName] = useState('');
       const [myPin, setMyPin] = useState('');
       const [quoteInput, setQuoteInput] = useState('');
       const [submitting, setSubmitting] = useState(false);
-      const [isAdmin, setIsAdmin] = useState(false);
       const [selectedQuote, setSelectedQuote] = useState('');
       const [customQuote, setCustomQuote] = useState('');
       const [showAddQuote, setShowAddQuote] = useState(false);
