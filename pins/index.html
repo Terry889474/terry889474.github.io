@@ -703,7 +703,16 @@
                       })}
                     </div>
                   </div>
-                  <div className="fines-total">€{rider.fines || 0}</div>
+                  <div className="fines-total">
+                    <div style={{ fontSize: '20px', fontWeight: '700' }}>
+                      €{(rider.fines || 0) - (rider.credits || 0)}
+                    </div>
+                    {rider.credits > 0 && (
+                      <div style={{ fontSize: '11px', color: '#059669', marginTop: '2px' }}>
+                        {rider.fines || 0} fines - {rider.credits} credits
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })
@@ -1339,6 +1348,16 @@
       const [photoPreview, setPhotoPreview] = useState('');
       const [uploading, setUploading] = useState(false);
       const [reportedBy, setReportedBy] = useState('');
+      const [dailyBorat, setDailyBorat] = useState(null);
+      const [boratSelection, setBoratSelection] = useState('');
+      
+      useEffect(() => {
+        const boratRef = db.ref('pins/dailyBorat');
+        boratRef.on('value', (snapshot) => {
+          setDailyBorat(snapshot.val());
+        });
+        return () => boratRef.off();
+      }, []);
       
       const handlePhotoChange = (e) => {
         const file = e.target.files[0];
@@ -1349,6 +1368,78 @@
             setPhotoPreview(reader.result);
           };
           reader.readAsDataURL(file);
+        }
+      };
+      
+      const handleAssignBorat = async () => {
+        if (!boratSelection) {
+          alert('Please select a rider');
+          return;
+        }
+        
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Check if already assigned today
+          if (dailyBorat && dailyBorat.date === today) {
+            if (!confirm(`${dailyBorat.name} already has Borat today. Reassign to ${boratSelection}?`)) {
+              return;
+            }
+            
+            // Remove credit from previous winner
+            const prevRiderRef = db.ref(`pins/riders/${dailyBorat.name}`);
+            const prevSnapshot = await prevRiderRef.once('value');
+            const prevData = prevSnapshot.val();
+            await prevRiderRef.update({
+              credits: Math.max(0, (prevData.credits || 0) - 5),
+              awards: Math.max(0, (prevData.awards || 0) - 1)
+            });
+            
+            // Add credit back to kitty
+            const kittyRef = db.ref('pins/kitty');
+            const kittySnapshot = await kittyRef.once('value');
+            await kittyRef.set((kittySnapshot.val() || 0) + 5);
+          }
+          
+          // Award Borat to new person
+          const riderRef = db.ref(`pins/riders/${boratSelection}`);
+          const riderSnapshot = await riderRef.once('value');
+          const riderData = riderSnapshot.val();
+          
+          await riderRef.update({
+            credits: (riderData.credits || 0) + 5,
+            awards: (riderData.awards || 0) + 1,
+            'pins/borat': (riderData.pins?.borat || 0) + 1
+          });
+          
+          // Deduct from kitty
+          const kittyRef = db.ref('pins/kitty');
+          const kittySnapshot = await kittyRef.once('value');
+          await kittyRef.set(Math.max(0, (kittySnapshot.val() || 0) - 5));
+          
+          // Update daily Borat record
+          await db.ref('pins/dailyBorat').set({
+            name: boratSelection,
+            date: today,
+            timestamp: Date.now()
+          });
+          
+          // Add to activity feed
+          const activityRef = db.ref('pins/activities').push();
+          await activityRef.set({
+            type: 'award',
+            rider: boratSelection,
+            pin: 'borat',
+            fine: 0,
+            description: 'Daily Borat Award - €5 credit earned',
+            timestamp: Date.now()
+          });
+          
+          setBoratSelection('');
+          alert(`${boratSelection} receives today's Borat! 🏆 €5 credit awarded`);
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error assigning Borat');
         }
       };
       
@@ -1394,16 +1485,28 @@
             [`pins/${selectedPin}`]: (riderData.pins?.[selectedPin] || 0) + 1
           };
           
-          if (!isPositive) {
+          if (isPositive) {
+            // Borat award: add €5 credit
+            updates.credits = (riderData.credits || 0) + 5;
+            updates.awards = (riderData.awards || 0) + 1;
+          } else {
+            // Negative pin: add fine
             updates.fines = (riderData.fines || 0) + fineAmount;
           }
           
           await riderRef.update(updates);
           
-          if (!isPositive) {
-            const kittyRef = db.ref('pins/kitty');
-            const kittySnapshot = await kittyRef.once('value');
-            await kittyRef.set((kittySnapshot.val() || 0) + fineAmount);
+          // Update kitty
+          const kittyRef = db.ref('pins/kitty');
+          const kittySnapshot = await kittyRef.once('value');
+          const currentKitty = kittySnapshot.val() || 0;
+          
+          if (isPositive) {
+            // Deduct credit from kitty
+            await kittyRef.set(Math.max(0, currentKitty - 5));
+          } else {
+            // Add fine to kitty
+            await kittyRef.set(currentKitty + fineAmount);
           }
           
           setSelectedRider('');
@@ -1430,8 +1533,58 @@
         ? PIN_CATEGORIES.negative 
         : [];
       
+      const today = new Date().toISOString().split('T')[0];
+      const isBoratToday = dailyBorat?.date === today;
+      
       return (
         <>
+          <div className="card" style={{ background: isBoratToday ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#000', marginBottom: '16px' }}>
+            <h2 style={{ marginBottom: '12px', fontSize: '18px', fontWeight: '700' }}>
+              👍 Daily Borat Award
+            </h2>
+            
+            {isBoratToday ? (
+              <>
+                <div style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px' }}>
+                  🏆 {dailyBorat.name}
+                </div>
+                <div style={{ fontSize: '14px', opacity: 0.8', marginBottom: '8px' }}>
+                  Very Nice! €5 credit earned
+                </div>
+                <div style={{ fontSize: '12px', opacity: 0.7' }}>
+                  {new Date(dailyBorat.date).toLocaleDateString()}
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ marginBottom: '12px', fontSize: '14px', opacity: 0.9 }}>
+                  ⚠️ Mandatory: One rider MUST receive Borat today
+                </p>
+                
+                <select 
+                  className="form-select"
+                  value={boratSelection}
+                  onChange={(e) => setBoratSelection(e.target.value)}
+                  style={{ marginBottom: '12px', background: 'white', color: '#000' }}
+                >
+                  <option value="">-- Terry: Select who deserves Borat --</option>
+                  {RIDERS.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                
+                <button 
+                  className="btn btn-primary"
+                  onClick={handleAssignBorat}
+                  disabled={!boratSelection}
+                  style={{ background: '#059669', border: 'none', opacity: boratSelection ? 1 : 0.5 }}
+                >
+                  Award Borat (€5 Credit)
+                </button>
+              </>
+            )}
+          </div>
+          
           <div className="card">
             <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Report Violation</h2>
             
