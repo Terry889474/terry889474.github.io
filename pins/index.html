@@ -1490,12 +1490,19 @@
             </div>
           </div>
           
-          <button 
-            className="btn btn-secondary"
-            onClick={handleSetAssistant}
-          >
-            Reset Assistant for New Day
-          </button>
+          {isAdmin && (
+            <button 
+              className="btn btn-secondary"
+              onClick={async () => {
+                if (confirm('Reset Assistant for a new day?')) {
+                  await db.ref('pins/assistantSupervisor').remove();
+                }
+              }}
+              style={{ background: '#dc2626' }}
+            >
+              Reset Assistant for New Day (Admin)
+            </button>
+          )}
         </>
       );
     }
