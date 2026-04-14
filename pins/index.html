@@ -524,34 +524,6 @@
       const [kittyTotal, setKittyTotal] = useState(0);
       const [dailyQuote, setDailyQuote] = useState(null);
       const [assistantSupervisor, setAssistantSupervisor] = useState(null);
-      const [isAdmin, setIsAdmin] = useState(false);
-      const [showAdminLogin, setShowAdminLogin] = useState(false);
-      const [adminPin, setAdminPin] = useState('');
-      
-      // Check for admin session on load
-      useEffect(() => {
-        const savedAdmin = sessionStorage.getItem('pinsAdmin');
-        if (savedAdmin === 'true') {
-          setIsAdmin(true);
-        }
-      }, []);
-      
-      const handleAdminLogin = () => {
-        if (adminPin === '202') {
-          setIsAdmin(true);
-          sessionStorage.setItem('pinsAdmin', 'true');
-          setShowAdminLogin(false);
-          setAdminPin('');
-        } else {
-          alert('Incorrect PIN');
-          setAdminPin('');
-        }
-      };
-      
-      const handleAdminLogout = () => {
-        setIsAdmin(false);
-        sessionStorage.removeItem('pinsAdmin');
-      };
       
       useEffect(() => {
         // Initialize riders if they don't exist
@@ -623,43 +595,8 @@
       return (
         <div className="app-container">
           <div className="header">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h1>🏍️ EuroTrash Pins 2026</h1>
-                <p>May the odds be ever in your favor</p>
-              </div>
-              {isAdmin ? (
-                <button 
-                  onClick={handleAdminLogout}
-                  style={{
-                    background: '#059669',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🔓 Admin
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setShowAdminLogin(true)}
-                  style={{
-                    background: '#64748b',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🔒 Login
-                </button>
-              )}
-            </div>
+            <h1>🏍️ EuroTrash Pins 2026</h1>
+            <p>May the odds be ever in your favor</p>
           </div>
           
           <div className="tabs">
@@ -704,102 +641,18 @@
               />
             )}
             {activeTab === 'quote' && (
-              <QuoteTab dailyQuote={dailyQuote} riders={riders} isAdmin={isAdmin} />
+              <QuoteTab dailyQuote={dailyQuote} riders={riders} />
             )}
             {activeTab === 'assistant' && (
-              <AssistantTab assistantSupervisor={assistantSupervisor} riders={riders} isAdmin={isAdmin} />
+              <AssistantTab assistantSupervisor={assistantSupervisor} riders={riders} />
             )}
             {activeTab === 'report' && (
-              <ReportTab riders={riders} isAdmin={isAdmin} />
+              <ReportTab riders={riders} />
             )}
             {activeTab === 'feed' && (
               <FeedTab activities={activities} />
             )}
           </div>
-          
-          {showAdminLogin && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}>
-              <div style={{
-                background: '#1e293b',
-                padding: '24px',
-                borderRadius: '12px',
-                maxWidth: '400px',
-                width: '90%'
-              }}>
-                <h2 style={{ marginBottom: '16px', fontSize: '20px' }}>Admin Login</h2>
-                <p style={{ marginBottom: '16px', fontSize: '14px', color: '#94a3b8' }}>
-                  Enter Terry's PIN to access admin features
-                </p>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="Enter PIN"
-                  value={adminPin}
-                  onChange={(e) => setAdminPin(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    fontSize: '18px',
-                    background: '#0f172a',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: 'white',
-                    textAlign: 'center',
-                    letterSpacing: '4px',
-                    marginBottom: '16px'
-                  }}
-                  autoFocus
-                />
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={handleAdminLogin}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      background: '#7c3aed',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowAdminLogin(false);
-                      setAdminPin('');
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      background: '#475569',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
@@ -868,7 +721,7 @@
       );
     }
     
-    function QuoteTab({ dailyQuote, riders, isAdmin }) {
+    function QuoteTab({ dailyQuote, riders }) {
       const [myName, setMyName] = useState('');
       const [myPin, setMyPin] = useState('');
       const [quoteInput, setQuoteInput] = useState('');
@@ -1288,7 +1141,7 @@
       );
     }
     
-    function AssistantTab({ assistantSupervisor, riders, isAdmin }) {
+    function AssistantTab({ assistantSupervisor, riders }) {
       const [completedDuties, setCompletedDuties] = useState({});
       const [manualSelection, setManualSelection] = useState('');
       
@@ -1389,31 +1242,25 @@
               No assistant supervisor assigned yet.
             </p>
             
-            {!isAdmin ? (
-              <div style={{ background: '#475569', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-                <p style={{ margin: 0, color: '#cbd5e1' }}>🔒 Admin login required to assign Assistant</p>
-              </div>
-            ) : (
-              <>
-                <div style={{ marginBottom: '16px' }}>
-                  <button className="btn btn-primary" onClick={() => handleSetAssistant()}>
-                    Auto: Set Assistant (Most Fined)
-                  </button>
-                </div>
-                
-                <div style={{ borderTop: '1px solid #334155', paddingTop: '16px', marginTop: '16px' }}>
-                  <label className="form-label">Or manually select:</label>
-                  <select 
-                    className="form-select"
-                    value={manualSelection}
-                    onChange={(e) => setManualSelection(e.target.value)}
-                    style={{ marginBottom: '12px' }}
-                  >
-                    <option value="">-- Select rider --</option>
-                    {RIDERS.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+            <div style={{ marginBottom: '16px' }}>
+              <button className="btn btn-primary" onClick={() => handleSetAssistant()}>
+                Auto: Set Assistant (Most Fined)
+              </button>
+            </div>
+            
+            <div style={{ borderTop: '1px solid #334155', paddingTop: '16px', marginTop: '16px' }}>
+              <label className="form-label">Or manually select:</label>
+              <select 
+                className="form-select"
+                value={manualSelection}
+                onChange={(e) => setManualSelection(e.target.value)}
+                style={{ marginBottom: '12px' }}
+              >
+                <option value="">-- Select rider --</option>
+                {RIDERS.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
               <button 
                 className="btn btn-secondary" 
                 onClick={() => handleSetAssistant(manualSelection)}
@@ -1422,8 +1269,6 @@
                 Set Selected as Assistant
               </button>
             </div>
-              </>
-            )}
           </div>
         );
       }
@@ -1493,7 +1338,7 @@
       );
     }
     
-    function ReportTab({ riders, isAdmin }) {
+    function ReportTab({ riders }) {
       const [selectedRider, setSelectedRider] = useState('');
       const [category, setCategory] = useState('');
       const [selectedPin, setSelectedPin] = useState('');
@@ -1710,10 +1555,6 @@
                   {new Date(dailyBorat.date).toLocaleDateString()}
                 </div>
               </>
-            ) : !isAdmin ? (
-              <div style={{ padding: '16px', textAlign: 'center' }}>
-                <p style={{ margin: 0, opacity: 0.9 }}>🔒 Admin login required to award Borat</p>
-              </div>
             ) : (
               <>
                 <p style={{ marginBottom: '12px', fontSize: '14px', opacity: 0.9 }}>
