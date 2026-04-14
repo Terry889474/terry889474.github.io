@@ -1370,12 +1370,15 @@
             photoURL = await snapshot.ref.getDownloadURL();
           }
           
+          const isPositive = category === 'positive';
+          const fineAmount = isPositive ? 0 : 5;
+          
           const activityRef = db.ref('pins/activities').push();
           await activityRef.set({
-            type: 'violation',
+            type: isPositive ? 'award' : 'violation',
             rider: selectedRider,
             pin: selectedPin,
-            fine: parseInt(fine),
+            fine: fineAmount,
             description,
             photoURL,
             reportedBy,
@@ -1386,15 +1389,22 @@
           const riderSnapshot = await riderRef.once('value');
           const riderData = riderSnapshot.val();
           
-          await riderRef.update({
-            fines: (riderData.fines || 0) + parseInt(fine),
-            violations: (riderData.violations || 0) + 1,
+          const updates = {
+            violations: (riderData.violations || 0) + (isPositive ? 0 : 1),
             [`pins/${selectedPin}`]: (riderData.pins?.[selectedPin] || 0) + 1
-          });
+          };
           
-          const kittyRef = db.ref('pins/kitty');
-          const kittySnapshot = await kittyRef.once('value');
-          await kittyRef.set((kittySnapshot.val() || 0) + parseInt(fine));
+          if (!isPositive) {
+            updates.fines = (riderData.fines || 0) + fineAmount;
+          }
+          
+          await riderRef.update(updates);
+          
+          if (!isPositive) {
+            const kittyRef = db.ref('pins/kitty');
+            const kittySnapshot = await kittyRef.once('value');
+            await kittyRef.set((kittySnapshot.val() || 0) + fineAmount);
+          }
           
           setSelectedRider('');
           setCategory('');
@@ -1405,10 +1415,10 @@
           setPhotoPreview('');
           setReportedBy('');
           
-          alert('Violation reported! 📸');
+          alert(isPositive ? 'Award given! 🏆' : 'Violation reported! 📸');
         } catch (error) {
           console.error('Error submitting:', error);
-          alert('Error submitting violation');
+          alert('Error submitting');
         } finally {
           setUploading(false);
         }
@@ -1492,9 +1502,9 @@
               <input 
                 type="text" 
                 className="form-input"
-                value="€5"
+                value={category === 'positive' ? 'N/A (Award)' : '€5'}
                 readOnly
-                style={{ background: '#1e293b', color: '#94a3b8', cursor: 'not-allowed' }}
+                style={{ background: '#1e293b', color: category === 'positive' ? '#059669' : '#94a3b8', cursor: 'not-allowed', fontWeight: category === 'positive' ? '600' : 'normal' }}
               />
             </div>
             
