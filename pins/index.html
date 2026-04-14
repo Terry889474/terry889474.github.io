@@ -1030,7 +1030,7 @@
                 rider: name,
                 pin: 'quote-challenge',
                 fine: 5,
-                description: `Failed Daily Quote Challenge. Said: "${submission.quote}" (Correct: "${dailyQuote.correctQuote}")`,
+                description: `Failed Daily Quote Challenge. Said: "${submission.quote}"`,
                 timestamp: Date.now()
               });
             }
@@ -1269,13 +1269,13 @@
             Terry: Set Daily Quote
           </button>
           
-          {isToday && dailyQuote?.correctQuote && (
+          {isAdmin && isToday && dailyQuote?.correctQuote && (
             <button 
               className="btn btn-primary"
               onClick={handleScoreQuotes}
               style={{ marginTop: '12px' }}
             >
-              Terry: Score All Quotes
+              Score All Quotes
             </button>
           )}
         </>
@@ -1432,6 +1432,20 @@
             <div style={{ fontSize: '14px', opacity: 0.8 }}>
               {new Date(assistantSupervisor.date).toLocaleDateString()}
             </div>
+            
+            {isAdmin && (
+              <button
+                className="btn btn-secondary"
+                onClick={async () => {
+                  if (confirm('Reset Assistant for a new day?')) {
+                    await db.ref('pins/assistantSupervisor').remove();
+                  }
+                }}
+                style={{ marginTop: '12px', background: '#dc2626', width: '100%' }}
+              >
+                Reset Assistant (Admin)
+              </button>
+            )}
           </div>
           
           <div className="duty-checklist">
