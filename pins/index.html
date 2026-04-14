@@ -1919,8 +1919,44 @@
                     {isAdmin && (
                       <button
                         onClick={async () => {
-                          if (confirm('Delete this feed entry?')) {
+                          if (!confirm(`Undo this ${isAward ? 'award' : 'violation'}? This will reverse the fine/credit.`)) {
+                            return;
+                          }
+                          
+                          try {
+                            // Reverse the rider's fine/credit
+                            const riderRef = db.ref(`pins/riders/${activity.rider}`);
+                            const riderSnapshot = await riderRef.once('value');
+                            const riderData = riderSnapshot.val();
+                            
+                            if (isAward) {
+                              // Remove credit and award count
+                              await riderRef.update({
+                                credits: Math.max(0, (riderData.credits || 0) - (activity.fine || 5)),
+                                awards: Math.max(0, (riderData.awards || 0) - 1)
+                              });
+                              
+                              // Add credit back to kitty
+                              const kittyRef = db.ref('pins/kitty');
+                              const kittySnapshot = await kittyRef.once('value');
+                              await kittyRef.set((kittySnapshot.val() || 0) + (activity.fine || 5));
+                            } else {
+                              // Remove fine and violation count
+                              await riderRef.update({
+                                fines: Math.max(0, (riderData.fines || 0) - (activity.fine || 0)),
+                                violations: Math.max(0, (riderData.violations || 0) - 1)
+                              });
+                              
+                              // Remove fine from kitty
+                              const kittyRef = db.ref('pins/kitty');
+                              const kittySnapshot = await kittyRef.once('value');
+                              await kittyRef.set(Math.max(0, (kittySnapshot.val() || 0) - (activity.fine || 0)));
+                            }
+                            
+                            // Delete the feed entry
                             await db.ref(`pins/activities/${activity.id}`).remove();
+                          } catch (error) {
+                            alert('Error undoing entry: ' + error.message);
                           }
                         }}
                         style={{
@@ -1933,7 +1969,7 @@
                           cursor: 'pointer'
                         }}
                       >
-                        ❌
+                        ↩️
                       </button>
                     )}
                   </div>
