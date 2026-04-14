@@ -701,7 +701,7 @@
               />
             )}
             {activeTab === 'quote' && (
-              <QuoteTab dailyQuote={dailyQuote} riders={riders} isAdmin={isAdmin} />
+              <QuoteTab dailyQuote={dailyQuote} riders={riders} />
             )}
             {activeTab === 'assistant' && (
               <AssistantTab assistantSupervisor={assistantSupervisor} riders={riders} isAdmin={isAdmin} />
@@ -863,7 +863,7 @@
       );
     }
     
-    function QuoteTab({ dailyQuote, riders, isAdmin }) {
+    function QuoteTab({ dailyQuote, riders }) {
       const [myName, setMyName] = useState('');
       const [myPin, setMyPin] = useState('');
       const [quoteInput, setQuoteInput] = useState('');
