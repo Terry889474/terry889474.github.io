@@ -1010,13 +1010,14 @@
             await db.ref(`pins/dailyQuote/submissions/${name}/correct`).set(isCorrect);
             
             if (!isCorrect) {
-              // Add fine
+              // Add fine and increment violations
               const riderRef = db.ref(`pins/riders/${name}`);
               const riderSnapshot = await riderRef.once('value');
               const riderData = riderSnapshot.val();
               
               await riderRef.update({
-                fines: (riderData.fines || 0) + 5
+                fines: (riderData.fines || 0) + 5,
+                violations: (riderData.violations || 0) + 1
               });
               
               // Update kitty
@@ -1260,21 +1261,13 @@
             </div>
           )}
           
-          <button 
-            className="btn btn-secondary"
-            onClick={() => setIsAdmin(true)}
-            style={{ marginTop: '12px' }}
-          >
-            Terry: Set Daily Quote
-          </button>
-          
-          {isAdmin && isToday && dailyQuote?.correctQuote && (
+          {isAdmin && dailyQuote?.correctQuote && (
             <button 
               className="btn btn-primary"
               onClick={handleScoreQuotes}
               style={{ marginTop: '12px' }}
             >
-              Score All Quotes
+              Score All Quotes (Admin)
             </button>
           )}
         </>
