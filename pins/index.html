@@ -1149,6 +1149,53 @@
                 </button>
               </>
             )}
+            
+            {dailyQuote?.correctQuote && (
+              <>
+                <div style={{ marginTop: '24px', padding: '12px', background: '#0f172a', borderRadius: '8px' }}>
+                  <h3 style={{ fontSize: '16px', marginBottom: '12px', color: '#10b981' }}>
+                    Today's Quote: {dailyQuote.correctQuote}
+                  </h3>
+                  
+                  {dailyQuote.submissions && Object.keys(dailyQuote.submissions).length > 0 && (
+                    <>
+                      <h4 style={{ fontSize: '14px', marginTop: '16px', marginBottom: '8px' }}>
+                        Submissions:
+                      </h4>
+                      {Object.entries(dailyQuote.submissions).map(([name, submission]) => (
+                        <div key={name} style={{ 
+                          padding: '8px', 
+                          background: '#1e293b', 
+                          borderRadius: '6px', 
+                          marginBottom: '6px',
+                          borderLeft: submission.correct === true ? '3px solid #10b981' : 
+                                     submission.correct === false ? '3px solid #ef4444' : 
+                                     '3px solid #64748b'
+                        }}>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
+                            {name} 
+                            {submission.correct === true && ' ✅'}
+                            {submission.correct === false && ' ❌'}
+                            {submission.correct === undefined && ' ⏳'}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#94a3b8' }}>
+                            {submission.quote}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+                
+                <button 
+                  className="btn btn-primary"
+                  onClick={handleScoreQuotes}
+                  style={{ marginTop: '16px', width: '100%' }}
+                >
+                  Score All Quotes (Admin)
+                </button>
+              </>
+            )}
           </div>
         );
       }
