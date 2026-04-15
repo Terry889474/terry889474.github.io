@@ -845,7 +845,31 @@
                         background: '#ef4444',
                         color: 'white'
                       }}>
-                        ⚠️ {(rider.speeder || 0) + (rider.country || 0) + (rider.dumbfuckery || 0)}
+                        🏴 {rider.country || 0}
+                      </span>
+                      <span style={{ 
+                        display: 'inline-block',
+                        padding: '4px 10px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        marginRight: '6px',
+                        background: '#ef4444',
+                        color: 'white'
+                      }}>
+                        🏍️ {rider.speeder || 0}
+                      </span>
+                      <span style={{ 
+                        display: 'inline-block',
+                        padding: '4px 10px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        marginRight: '6px',
+                        background: '#ef4444',
+                        color: 'white'
+                      }}>
+                        🤦 {rider.dumbfuckery || 0}
                       </span>
                       <span style={{ 
                         display: 'inline-block',
@@ -890,7 +914,7 @@
                     </div>
                     {rider.credits > 0 && (
                       <div style={{ fontSize: '11px', color: '#059669', marginTop: '2px' }}>
-                        {rider.fines || 0} fines - {rider.credits} credits
+                        {rider.violations || 0} fines - {rider.awards || 0} credits
                       </div>
                     )}
                   </div>
@@ -1912,8 +1936,16 @@
             )}
           </div>
           
-          <div className="card">
-            <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Report Violation</h2>
+          {!isAdmin ? (
+            <div className="card">
+              <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Report Violation</h2>
+              <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8' }}>
+                <p>🔒 Admin login required to report violations</p>
+              </div>
+            </div>
+          ) : (
+            <div className="card">
+              <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Report Violation</h2>
             
             <div className="form-group">
               <label className="form-label">Your Name *</label>
@@ -2022,6 +2054,7 @@
               {uploading ? 'Submitting...' : 'Submit Violation'}
             </button>
           </div>
+          )}
         </>
       );
     }
