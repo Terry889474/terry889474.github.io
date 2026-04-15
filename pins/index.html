@@ -1688,6 +1688,7 @@
       const [reportedBy, setReportedBy] = useState('');
       const [dailyBorat, setDailyBorat] = useState(null);
       const [boratSelection, setBoratSelection] = useState('');
+      const [pending, setPending] = useState([]);
       
       useEffect(() => {
         const boratRef = db.ref('pins/dailyBorat');
@@ -1695,6 +1696,20 @@
           setDailyBorat(snapshot.val());
         });
         return () => boratRef.off();
+      }, []);
+      
+      useEffect(() => {
+        const pendingRef = db.ref('pins/pending');
+        pendingRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            const pendingArray = Object.entries(data).map(([id, item]) => ({ id, ...item }));
+            setPending(pendingArray.filter(p => p.status === 'pending'));
+          } else {
+            setPending([]);
+          }
+        });
+        return () => pendingRef.off();
       }, []);
       
       const handlePhotoChange = (e) => {
@@ -1802,41 +1817,136 @@
           const isPositive = category === 'positive';
           const fineAmount = isPositive ? 0 : 5;
           
+          // If admin, approve immediately; otherwise create pending nomination
+          if (isAdmin) {
+            // ADMIN: Immediate approval
+            const activityRef = db.ref('pins/activities').push();
+            await activityRef.set({
+              type: isPositive ? 'award' : 'violation',
+              rider: selectedRider,
+              pin: selectedPin,
+              fine: fineAmount,
+              description,
+              photoURL,
+              reportedBy,
+              timestamp: Date.now()
+            });
+            
+            const riderRef = db.ref(`pins/riders/${selectedRider}`);
+            const riderSnapshot = await riderRef.once('value');
+            const riderData = riderSnapshot.val();
+            
+            const updates = {
+              violations: (riderData.violations || 0) + (isPositive ? 0 : 1),
+              [`pins/${selectedPin}`]: (riderData.pins?.[selectedPin] || 0) + 1
+            };
+            
+            if (isPositive) {
+              // Borat award: add €5 credit
+              updates.credits = (riderData.credits || 0) + 5;
+              updates.awards = (riderData.awards || 0) + 1;
+            } else {
+              // Negative pin: add fine and track violation type
+              updates.fines = (riderData.fines || 0) + fineAmount;
+              
+              // Track specific violation types
+              if (selectedPin === 'speeder') {
+                updates.speeder = (riderData.speeder || 0) + 1;
+              } else if (selectedPin === 'country-member') {
+                updates.country = (riderData.country || 0) + 1;
+              } else if (selectedPin === 'dumbfuckery') {
+                updates.dumbfuckery = (riderData.dumbfuckery || 0) + 1;
+              }
+            }
+            
+            await riderRef.update(updates);
+            
+            // Update kitty
+            const kittyRef = db.ref('pins/kitty');
+            const kittySnapshot = await kittyRef.once('value');
+            const currentKitty = kittySnapshot.val() || 0;
+            
+            if (isPositive) {
+              // Deduct credit from kitty
+              await kittyRef.set(Math.max(0, currentKitty - 5));
+            } else {
+              // Add fine to kitty
+              await kittyRef.set(currentKitty + fineAmount);
+            }
+            
+            alert(isPositive ? 'Award given! 🏆' : 'Violation reported! 📸');
+          } else {
+            // NON-ADMIN: Create pending nomination
+            const pendingRef = db.ref('pins/pending').push();
+            await pendingRef.set({
+              type: isPositive ? 'award' : 'violation',
+              rider: selectedRider,
+              pin: selectedPin,
+              fine: fineAmount,
+              description,
+              photoURL,
+              reportedBy,
+              timestamp: Date.now(),
+              status: 'pending'
+            });
+            
+            alert('Nomination submitted! Waiting for Terry\'s approval 🕐');
+          }
+          
+          setSelectedRider('');
+          setCategory('');
+          setSelectedPin('');
+          setFine('5');
+          setDescription('');
+          setPhoto(null);
+          setPhotoPreview('');
+          setReportedBy('');
+        } catch (error) {
+          console.error('Error submitting:', error);
+          alert('Error submitting');
+        } finally {
+          setUploading(false);
+        }
+      };
+      
+      const handleApprovePending = async (pendingItem) => {
+        try {
+          const isPositive = pendingItem.type === 'award';
+          
+          // Add to activities feed
           const activityRef = db.ref('pins/activities').push();
           await activityRef.set({
-            type: isPositive ? 'award' : 'violation',
-            rider: selectedRider,
-            pin: selectedPin,
-            fine: fineAmount,
-            description,
-            photoURL,
-            reportedBy,
+            type: pendingItem.type,
+            rider: pendingItem.rider,
+            pin: pendingItem.pin,
+            fine: pendingItem.fine,
+            description: pendingItem.description,
+            photoURL: pendingItem.photoURL,
+            reportedBy: pendingItem.reportedBy,
             timestamp: Date.now()
           });
           
-          const riderRef = db.ref(`pins/riders/${selectedRider}`);
+          // Update rider stats
+          const riderRef = db.ref(`pins/riders/${pendingItem.rider}`);
           const riderSnapshot = await riderRef.once('value');
           const riderData = riderSnapshot.val();
           
           const updates = {
             violations: (riderData.violations || 0) + (isPositive ? 0 : 1),
-            [`pins/${selectedPin}`]: (riderData.pins?.[selectedPin] || 0) + 1
+            [`pins/${pendingItem.pin}`]: (riderData.pins?.[pendingItem.pin] || 0) + 1
           };
           
           if (isPositive) {
-            // Borat award: add €5 credit
             updates.credits = (riderData.credits || 0) + 5;
             updates.awards = (riderData.awards || 0) + 1;
           } else {
-            // Negative pin: add fine and track violation type
-            updates.fines = (riderData.fines || 0) + fineAmount;
+            updates.fines = (riderData.fines || 0) + pendingItem.fine;
             
-            // Track specific violation types
-            if (selectedPin === 'speeder') {
+            if (pendingItem.pin === 'speeder') {
               updates.speeder = (riderData.speeder || 0) + 1;
-            } else if (selectedPin === 'country-member') {
+            } else if (pendingItem.pin === 'country-member') {
               updates.country = (riderData.country || 0) + 1;
-            } else if (selectedPin === 'dumbfuckery') {
+            } else if (pendingItem.pin === 'dumbfuckery') {
               updates.dumbfuckery = (riderData.dumbfuckery || 0) + 1;
             }
           }
@@ -1849,28 +1959,30 @@
           const currentKitty = kittySnapshot.val() || 0;
           
           if (isPositive) {
-            // Deduct credit from kitty
             await kittyRef.set(Math.max(0, currentKitty - 5));
           } else {
-            // Add fine to kitty
-            await kittyRef.set(currentKitty + fineAmount);
+            await kittyRef.set(currentKitty + pendingItem.fine);
           }
           
-          setSelectedRider('');
-          setCategory('');
-          setSelectedPin('');
-          setFine('5');
-          setDescription('');
-          setPhoto(null);
-          setPhotoPreview('');
-          setReportedBy('');
+          // Remove from pending
+          await db.ref(`pins/pending/${pendingItem.id}`).remove();
           
-          alert(isPositive ? 'Award given! 🏆' : 'Violation reported! 📸');
+          alert('Approved! ✅');
         } catch (error) {
-          console.error('Error submitting:', error);
-          alert('Error submitting');
-        } finally {
-          setUploading(false);
+          console.error('Error approving:', error);
+          alert('Error approving');
+        }
+      };
+      
+      const handleRejectPending = async (pendingItem) => {
+        if (!confirm('Reject this nomination?')) return;
+        
+        try {
+          await db.ref(`pins/pending/${pendingItem.id}`).remove();
+          alert('Rejected ❌');
+        } catch (error) {
+          console.error('Error rejecting:', error);
+          alert('Error rejecting');
         }
       };
       
@@ -1885,6 +1997,68 @@
       
       return (
         <>
+          {isAdmin && pending.length > 0 && (
+            <div className="card" style={{ background: '#7c3aed', color: 'white', marginBottom: '16px' }}>
+              <h2 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '700' }}>
+                ⏳ Pending Approvals ({pending.length})
+              </h2>
+              
+              {pending.map(item => {
+                const allPins = [...PIN_CATEGORIES.positive, ...PIN_CATEGORIES.negative];
+                const pin = allPins.find(p => p.id === item.pin);
+                const isPositive = item.type === 'award';
+                
+                return (
+                  <div key={item.id} style={{ 
+                    background: 'rgba(0,0,0,0.2)', 
+                    padding: '12px', 
+                    borderRadius: '8px', 
+                    marginBottom: '12px' 
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>
+                          {isPositive ? '🏆' : '⚠️'} {item.rider}
+                        </div>
+                        <div style={{ fontSize: '14px', opacity: 0.9 }}>
+                          {pin?.icon} {pin?.name || item.pin}
+                          {!isPositive && ` • €${item.fine}`}
+                        </div>
+                        {item.description && (
+                          <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px' }}>
+                            {item.description}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>
+                          Reported by {item.reportedBy}
+                        </div>
+                      </div>
+                    </div>
+                    {item.photoURL && (
+                      <img src={item.photoURL} alt="Evidence" style={{ width: '100%', borderRadius: '6px', marginBottom: '8px' }} />
+                    )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        className="btn btn-success"
+                        style={{ flex: 1, padding: '8px' }}
+                        onClick={() => handleApprovePending(item)}
+                      >
+                        ✅ Approve
+                      </button>
+                      <button 
+                        className="btn btn-danger"
+                        style={{ flex: 1, padding: '8px' }}
+                        onClick={() => handleRejectPending(item)}
+                      >
+                        ❌ Reject
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          
           <div className="card" style={{ background: isBoratToday ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#000', marginBottom: '16px' }}>
             <h2 style={{ marginBottom: '12px', fontSize: '18px', fontWeight: '700' }}>
               👍 Daily Borat Award
@@ -1936,16 +2110,10 @@
             )}
           </div>
           
-          {!isAdmin ? (
-            <div className="card">
-              <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Report Violation</h2>
-              <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8' }}>
-                <p>🔒 Admin login required to report violations</p>
-              </div>
-            </div>
-          ) : (
-            <div className="card">
-              <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Report Violation</h2>
+          <div className="card">
+            <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>
+              {isAdmin ? 'Report Violation or Award Borat' : 'Nominate Violation or Borat Award'}
+            </h2>
             
             <div className="form-group">
               <label className="form-label">Your Name *</label>
@@ -2051,10 +2219,9 @@
               onClick={handleSubmit}
               disabled={uploading}
             >
-              {uploading ? 'Submitting...' : 'Submit Violation'}
+              {uploading ? 'Submitting...' : (isAdmin ? 'Submit & Approve Immediately' : 'Submit for Approval')}
             </button>
           </div>
-          )}
         </>
       );
     }
