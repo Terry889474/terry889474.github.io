@@ -138,8 +138,8 @@
     
     .assistant-badge {
       display: inline-block;
-      background: #f59e0b;
-      color: #000;
+      background: #3b82f6;
+      color: #fff;
       padding: 2px 8px;
       border-radius: 4px;
       font-size: 10px;
@@ -883,24 +883,6 @@
                         💩 {rider.assistantDays || 0}
                       </span>
                     </div>
-                    <div style={{ marginTop: '6px' }}>
-                      {rider.pins && Object.entries(rider.pins).map(([pinId, count]) => {
-                        if (count > 0) {
-                          const allPins = [...PIN_CATEGORIES.positive, ...PIN_CATEGORIES.negative];
-                          const pin = allPins.find(p => p.id === pinId);
-                          const isPositive = PIN_CATEGORIES.positive.some(p => p.id === pinId);
-                          return (
-                            <span 
-                              key={pinId}
-                              className={`pin-badge ${isPositive ? 'positive' : 'negative'}`}
-                            >
-                              {pin?.icon} {count}
-                            </span>
-                          );
-                        }
-                        return null;
-                      })}
-                    </div>
                   </div>
                   <div className="fines-total">
                     <div style={{ fontSize: '20px', fontWeight: '700' }}>
@@ -1405,6 +1387,56 @@
         await db.ref(`pins/assistantSupervisor/completedDuties/${dutyId}`).set(newState);
       };
       
+      const handleValidateCompletion = async () => {
+        if (!assistantSupervisor) return;
+        
+        // Check if all duties are completed
+        const allCompleted = ASSISTANT_DUTIES.every(duty => completedDuties[duty.id]);
+        
+        if (!allCompleted) {
+          alert('Not all duties completed yet!');
+          return;
+        }
+        
+        if (!confirm(`Award €5 bonus to ${assistantSupervisor.name} for completing all duties?`)) {
+          return;
+        }
+        
+        try {
+          // Get rider data
+          const riderRef = db.ref(`pins/riders/${assistantSupervisor.name}`);
+          const riderSnapshot = await riderRef.once('value');
+          const riderData = riderSnapshot.val();
+          
+          // Add €5 credit (like Borat)
+          await riderRef.update({
+            credits: (riderData.credits || 0) + 5,
+            awards: (riderData.awards || 0) + 1
+          });
+          
+          // Deduct from kitty
+          const kittyRef = db.ref('pins/kitty');
+          const kittySnapshot = await kittyRef.once('value');
+          await kittyRef.set(Math.max(0, (kittySnapshot.val() || 0) - 5));
+          
+          // Add activity feed
+          const activityRef = db.ref('pins/activities').push();
+          await activityRef.set({
+            type: 'award',
+            rider: assistantSupervisor.name,
+            pin: 'assistant-bonus',
+            fine: 5,
+            description: 'Completed all Assistant Supervisor duties!',
+            timestamp: Date.now()
+          });
+          
+          alert(`€5 bonus awarded to ${assistantSupervisor.name}! 🎉`);
+        } catch (error) {
+          console.error('Error awarding bonus:', error);
+          alert('Error awarding bonus');
+        }
+      };
+      
       const handleSetAssistant = async (selectedName = null) => {
         const ridersList = Object.values(riders);
         if (ridersList.length === 0) return;
@@ -1576,17 +1608,27 @@
                 </button>
               </div>
             ))}
+            
+            {isAdmin && (
+              <button 
+                className="btn btn-success"
+                style={{ marginTop: '16px', width: '100%' }}
+                onClick={handleValidateCompletion}
+              >
+                ✅ All Duties Completed - Award €5 Bonus
+              </button>
+            )}
           </div>
           
           <div className="card">
             <h3 style={{ marginBottom: '12px' }}>Perks (Following Day)</h3>
             <div style={{ fontSize: '14px', color: '#94a3b8', lineHeight: '1.6' }}>
-              ✅ Choice of roommate for next evening<br/>
+              ✅ Choice of Room Buddy for tomorrow's lodgings<br/>
               ✅ Group buys you lunch tomorrow<br/>
               ✅ First pint at next evening stop<br/>
-              ✅ One navigation veto tomorrow<br/>
               ✅ One photo exemption tomorrow<br/>
-              ✅ Best parking spot tomorrow
+              ✅ Best Hotel parking spot tomorrow<br/>
+              ✅ €5 reward if all Daily Duties completed
             </div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '12px', fontStyle: 'italic' }}>
               * Perks earned after duties validated at dinner
