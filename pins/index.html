@@ -1608,6 +1608,18 @@
           
           <div className="duty-checklist">
             <h3 style={{ marginBottom: '12px' }}>Daily Duties (€5 fine each if missed)</h3>
+            {!isAdmin && (
+              <div style={{ 
+                padding: '12px', 
+                background: 'rgba(251, 191, 36, 0.1)', 
+                borderRadius: '6px', 
+                marginBottom: '12px',
+                fontSize: '13px',
+                color: '#fbbf24'
+              }}>
+                ℹ️ Only Terry can check off duties and validate completion at dinner
+              </div>
+            )}
             {ASSISTANT_DUTIES.map(duty => (
               <div key={duty.id} className={`duty-item ${completedDuties[duty.id] ? 'checked' : ''}`}>
                 <input 
@@ -1615,21 +1627,25 @@
                   className="duty-checkbox"
                   checked={completedDuties[duty.id] || false}
                   onChange={() => handleToggleDuty(duty.id)}
+                  disabled={!isAdmin}
+                  style={{ cursor: isAdmin ? 'pointer' : 'not-allowed', opacity: isAdmin ? 1 : 0.5 }}
                 />
                 <div className="duty-text">{duty.text}</div>
-                <button 
-                  className="btn btn-danger"
-                  style={{ 
-                    padding: '6px 12px', 
-                    fontSize: '12px',
-                    width: 'auto',
-                    marginLeft: '8px',
-                    marginBottom: 0
-                  }}
-                  onClick={() => handleMissedDuty(duty)}
-                >
-                  Missed
-                </button>
+                {isAdmin && (
+                  <button 
+                    className="btn btn-danger"
+                    style={{ 
+                      padding: '6px 12px', 
+                      fontSize: '12px',
+                      width: 'auto',
+                      marginLeft: '8px',
+                      marginBottom: 0
+                    }}
+                    onClick={() => handleMissedDuty(duty)}
+                  >
+                    Missed
+                  </button>
+                )}
               </div>
             ))}
             
