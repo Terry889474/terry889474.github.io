@@ -1693,6 +1693,51 @@
               <button
                 className="btn btn-secondary"
                 onClick={async () => {
+                  // Check for uncompleted duties first
+                  const uncompletedDuties = ASSISTANT_DUTIES.filter(duty => !completedDuties[duty.id]);
+                  
+                  if (uncompletedDuties.length > 0) {
+                    const confirmMsg = `${assistantSupervisor.name} has ${uncompletedDuties.length} uncompleted duties.\n\nApply €${uncompletedDuties.length * 5} in fines before resetting?`;
+                    
+                    if (!confirm(confirmMsg)) {
+                      return; // User cancelled
+                    }
+                    
+                    // Apply fines for all missed duties
+                    const totalFines = uncompletedDuties.length * 5;
+                    const name = assistantSupervisor.name;
+                    
+                    try {
+                      const riderRef = db.ref(`pins/riders/${name}`);
+                      const riderSnapshot = await riderRef.once('value');
+                      const riderData = riderSnapshot.val();
+                      
+                      await riderRef.update({
+                        fines: (riderData.fines || 0) + totalFines
+                      });
+                      
+                      const kittyRef = db.ref('pins/kitty');
+                      const kittySnapshot = await kittyRef.once('value');
+                      await kittyRef.set((kittySnapshot.val() || 0) + totalFines);
+                      
+                      for (const duty of uncompletedDuties) {
+                        const activityRef = db.ref('pins/activities').push();
+                        await activityRef.set({
+                          type: 'violation',
+                          rider: name,
+                          pin: 'assistant-duty',
+                          fine: 5,
+                          description: `Missed Assistant Supervisor duty: ${duty.text}`,
+                          timestamp: Date.now()
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Error applying fines:', error);
+                      alert('Error applying fines');
+                      return;
+                    }
+                  }
+                  
                   if (confirm('Reset Assistant for a new day?')) {
                     await db.ref('pins/assistantSupervisor').remove();
                   }
@@ -1777,6 +1822,51 @@
             <button 
               className="btn btn-secondary"
               onClick={async () => {
+                // Check for uncompleted duties first
+                const uncompletedDuties = ASSISTANT_DUTIES.filter(duty => !completedDuties[duty.id]);
+                
+                if (uncompletedDuties.length > 0) {
+                  const confirmMsg = `${assistantSupervisor.name} has ${uncompletedDuties.length} uncompleted duties.\n\nApply €${uncompletedDuties.length * 5} in fines before resetting?`;
+                  
+                  if (!confirm(confirmMsg)) {
+                    return; // User cancelled
+                  }
+                  
+                  // Apply fines for all missed duties
+                  const totalFines = uncompletedDuties.length * 5;
+                  const name = assistantSupervisor.name;
+                  
+                  try {
+                    const riderRef = db.ref(`pins/riders/${name}`);
+                    const riderSnapshot = await riderRef.once('value');
+                    const riderData = riderSnapshot.val();
+                    
+                    await riderRef.update({
+                      fines: (riderData.fines || 0) + totalFines
+                    });
+                    
+                    const kittyRef = db.ref('pins/kitty');
+                    const kittySnapshot = await kittyRef.once('value');
+                    await kittyRef.set((kittySnapshot.val() || 0) + totalFines);
+                    
+                    for (const duty of uncompletedDuties) {
+                      const activityRef = db.ref('pins/activities').push();
+                      await activityRef.set({
+                        type: 'violation',
+                        rider: name,
+                        pin: 'assistant-duty',
+                        fine: 5,
+                        description: `Missed Assistant Supervisor duty: ${duty.text}`,
+                        timestamp: Date.now()
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Error applying fines:', error);
+                    alert('Error applying fines');
+                    return;
+                  }
+                }
+                
                 if (confirm('Reset Assistant for a new day?')) {
                   await db.ref('pins/assistantSupervisor').remove();
                 }
