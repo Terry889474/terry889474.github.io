@@ -1846,12 +1846,18 @@
           if (isAdmin) {
             // ADMIN: Immediate approval
             const activityRef = db.ref('pins/activities').push();
+            
+            // Use special description for Borat awards
+            const activityDescription = isPositive && selectedPin === 'borat' 
+              ? 'Special Borat Award - €5 credit earned'
+              : description;
+            
             await activityRef.set({
               type: isPositive ? 'award' : 'violation',
               rider: selectedRider,
               pin: selectedPin,
               fine: fineAmount,
-              description,
+              description: activityDescription,
               reportedBy,
               timestamp: Date.now()
             });
@@ -1936,12 +1942,18 @@
           
           // Add to activities feed
           const activityRef = db.ref('pins/activities').push();
+          
+          // Use special description for Borat awards
+          const activityDescription = isPositive && pendingItem.pin === 'borat'
+            ? 'Special Borat Award - €5 credit earned'
+            : pendingItem.description;
+          
           await activityRef.set({
             type: pendingItem.type,
             rider: pendingItem.rider,
             pin: pendingItem.pin,
             fine: pendingItem.fine,
-            description: pendingItem.description,
+            description: activityDescription,
             reportedBy: pendingItem.reportedBy,
             timestamp: Date.now()
           });
