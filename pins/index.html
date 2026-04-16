@@ -452,7 +452,6 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
   
   <script type="text/babel">
     const { useState, useEffect } = React;
@@ -470,7 +469,6 @@
     
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const storage = firebase.storage();
     
     const RIDERS = ['Terry', 'Steve', 'Derek', 'Mark', 'Ant', 'Charles'];
     
@@ -1710,8 +1708,6 @@
       const [selectedPin, setSelectedPin] = useState('');
       const [fine, setFine] = useState('5');
       const [description, setDescription] = useState('');
-      const [photo, setPhoto] = useState(null);
-      const [photoPreview, setPhotoPreview] = useState('');
       const [uploading, setUploading] = useState(false);
       const [reportedBy, setReportedBy] = useState('');
       const [dailyBorat, setDailyBorat] = useState(null);
@@ -1740,17 +1736,6 @@
         return () => pendingRef.off();
       }, []);
       
-      const handlePhotoChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          setPhoto(file);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setPhotoPreview(reader.result);
-          };
-          reader.readAsDataURL(file);
-        }
-      };
       
       const handleAssignBorat = async () => {
         if (!boratSelection) {
@@ -1833,25 +1818,6 @@
         setUploading(true);
         
         try {
-          let photoURL = '';
-          
-          if (photo) {
-            try {
-              const timestamp = Date.now();
-              const storageRef = storage.ref(`violations/${timestamp}_${photo.name}`);
-              const snapshot = await storageRef.put(photo);
-              photoURL = await snapshot.ref.getDownloadURL();
-            } catch (photoError) {
-              console.error('Photo upload error:', photoError);
-              alert('Photo upload failed. Storage may not be configured. Continue without photo?');
-              if (!confirm('Continue without photo?')) {
-                setUploading(false);
-                return;
-              }
-              // Continue without photo
-            }
-          }
-          
           const isPositive = category === 'positive';
           const fineAmount = isPositive ? 0 : 5;
           
@@ -1865,7 +1831,6 @@
               pin: selectedPin,
               fine: fineAmount,
               description,
-              photoURL,
               reportedBy,
               timestamp: Date.now()
             });
@@ -1922,7 +1887,6 @@
               pin: selectedPin,
               fine: fineAmount,
               description,
-              photoURL,
               reportedBy,
               timestamp: Date.now(),
               status: 'pending'
@@ -1936,8 +1900,6 @@
           setSelectedPin('');
           setFine('5');
           setDescription('');
-          setPhoto(null);
-          setPhotoPreview('');
           setReportedBy('');
         } catch (error) {
           console.error('Error submitting:', error);
@@ -1959,7 +1921,6 @@
             pin: pendingItem.pin,
             fine: pendingItem.fine,
             description: pendingItem.description,
-            photoURL: pendingItem.photoURL,
             reportedBy: pendingItem.reportedBy,
             timestamp: Date.now()
           });
@@ -2234,22 +2195,6 @@
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What happened?"
               />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Photo Evidence</label>
-              <label className="file-upload">
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handlePhotoChange}
-                />
-                <div>📸 {photo ? 'Change Photo' : 'Take/Upload Photo'}</div>
-              </label>
-              {photoPreview && (
-                <img src={photoPreview} alt="Preview" className="preview-image" />
-              )}
             </div>
             
             <button 
