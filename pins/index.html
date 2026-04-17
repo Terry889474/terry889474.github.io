@@ -1124,6 +1124,11 @@
                             (submissionNormalized.length >= correctNormalized.length * 0.9 &&
                              correctNormalized.includes(submissionNormalized));
             
+            // Debug info for first submission
+            if (name === Object.keys(submissions)[0]) {
+              alert(`DEBUG INFO:\n\nCorrect: "${dailyQuote.correctQuote}"\nNormalized: "${correctNormalized}"\n\nYour answer: "${submission.quote}"\nNormalized: "${submissionNormalized}"\n\nMatch: ${submissionNormalized === correctNormalized}\nLength correct: ${correctNormalized.length}\nLength yours: ${submissionNormalized.length}`);
+            }
+            
             // Update submission with result
             await db.ref(`pins/dailyQuote/submissions/${name}/correct`).set(isCorrect);
             
