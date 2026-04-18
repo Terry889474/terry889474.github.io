@@ -227,7 +227,7 @@ function App(){
               nights:DEF.nights.map(def=>{const live=(val.nights||[]).find(n=>n.id===def.id);return live?{...def,...live}:def;}),
               deposits:{...DEF.deposits,...(val.deposits||{})},
               resolvedDeadlines:{...(val.resolvedDeadlines||{})},
-              fuel:Array.isArray(val.fuel)?val.fuel:[],
+               fuel:val.fuel?(Array.isArray(val.fuel)?val.fuel:Object.values(val.fuel)):[],
             };
             setData(merged);
           }
