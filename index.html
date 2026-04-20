@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="EuroTrash"/>
+  <meta name="theme-color" content="#0F172A"/>
+  <title>EuroTrash Tour 2026</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;padding:0;background:#0F172A;height:100%}
+    #root{height:100%}
+    input,textarea,select{font-family:inherit;font-size:inherit}
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+    input[type=number]{-moz-appearance:textfield}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+<script type="text/babel" data-presets="react,env">
+"use strict";
+const { useState, useEffect, useRef, useCallback } = React;
+
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBo_SoHRABLZDmeruNnGpKgCyT2PVgK3ds",
+  authDomain:        "eurotrash-2026.firebaseapp.com",
+  databaseURL:       "https://eurotrash-2026-default-rtdb.firebaseio.com",
+  projectId:         "eurotrash-2026",
+  storageBucket:     "eurotrash-2026.firebasestorage.app",
+  messagingSenderId: "762450805750",
+  appId:             "1:762450805750:web:dc53f3e5d4d158e4953dd7",
+};
+const FIREBASE_ON = !FIREBASE_CONFIG.apiKey.startsWith("PASTE");
+const ADMIN_PIN   = "2026";
+const DB_PATH     = "eurotrash2026";
+
+const RIDERS = ['Steve','Derek','Terry','Mark','Ant','Charles'];
+const RC = {
+  Steve:   {bg:'#DBEAFE',text:'#1e3a5f',border:'#93C5FD',dark:'#1D4ED8',solid:'#1D4ED8'},
+  Derek:   {bg:'#FEF3C7',text:'#78350f',border:'#FCD34D',dark:'#D97706',solid:'#D97706'},
+  Terry:   {bg:'#DCFCE7',text:'#14532d',border:'#86EFAC',dark:'#16A34A',solid:'#16A34A'},
+  Mark:    {bg:'#EDE9FE',text:'#4c1d95',border:'#C4B5FD',dark:'#7C3AED',solid:'#7C3AED'},
+  Ant:     {bg:'#FFE4E6',text:'#881337',border:'#FCA5A5',dark:'#DC2626',solid:'#DC2626'},
+  Charles: {bg:'#E2E8F0',text:'#334155',border:'#94A3B8',dark:'#475569',solid:'#475569'},
+};
+const ROLE = r => r==='Terry' ? 'admin' : 'rider';
+
+const DEADLINES = [
+  {id:'d01',property:"Hôtel Mir",location:"Saint-Lary-Soulan",checkIn:"20 May",cancelByText:"5 May 23:59",deadline:"2026-05-05",fee:79.33,payment:"Auto-charge 4 May",autoCharge:true,action:"MOST URGENT. Auto-charged 4 May. 50% fee from 6 May. Confirm or cancel NOW."},
+  {id:'d02',property:"Hotel Vauban Briançon",location:"Briançon",checkIn:"8 Jun",cancelByText:"10 May 23:59",deadline:"2026-05-10",fee:739,payment:"Auto-charge 9 May",autoCharge:true,action:"Largest single auto-charge. Motorcycle garage confirmed."},
+  {id:'d03',property:"Auberge De La Forêt",location:"Auris-en-Oisans",checkIn:"10 Jun",cancelByText:"13 May 23:59",deadline:"2026-05-13",fee:519.00,payment:"Auto-charge 11 May",autoCharge:true,action:"Strictest 28-day policy. 1 family room, 5 adults — confirm capacity."},
+  {id:'d04',property:"Hôtel Les Grenettes",location:"Sainte-Marie-de-Ré",checkIn:"17 May",cancelByText:"14 May 23:59",deadline:"2026-05-14",fee:99.61,payment:"Auto-charge 13 May",autoCharge:true,action:"1 twin / 2 adults — 3rd rider bed unconfirmed. Book 2nd room before 13 May."},
+  {id:'d05',property:"LOGIS Hôtel L'Océana",location:"Lanton",checkIn:"18 May",cancelByText:"15 May 23:59",deadline:"2026-05-15",fee:209.50,payment:"Pay at property",autoCharge:false,action:"Cancel by 15 May for no charge. Single apartment for 3 riders."},
+  {id:'d06',property:"Silken Puerta de Irati",location:"Ochagavía",checkIn:"19 May",cancelByText:"16 May 23:59",deadline:"2026-05-16",fee:203.50,payment:"Auto-charge 15 May",autoCharge:true,action:"Auto-charged 15 May. Bike lockers on site (fee applies)."},
+  {id:'d07',property:"Parador de Siguenza (May)",location:"Sigüenza",checkIn:"21 May",cancelByText:"18 May 23:59",deadline:"2026-05-18",fee:432.00,payment:"Pay at property",autoCharge:false,action:"First night all 6 together. Confirm Mark, Ant & Charles joining."},
+  {id:'d08',property:"Hotel Avenida",location:"San Sebastián",checkIn:"22 May",cancelByText:"19 May 23:59",deadline:"2026-05-19",fee:1599.00,payment:"Pay at property",autoCharge:false,action:"Fee = cost of 1st night (2 nights, 3 rooms, 6 riders)."},
+  {id:'d09',property:"Parador de Bielsa",location:"Espierba",checkIn:"24 May",cancelByText:"21 May 23:59",deadline:"2026-05-21",fee:1026.00,payment:"Pay at property",autoCharge:false,action:"Free parking on site."},
+  {id:'d10',property:"Parador La Seu D'Urgell",location:"La Seu d'Urgell",checkIn:"28 May",cancelByText:"25 May 23:59",deadline:"2026-05-25",fee:1235.00,payment:"Pay at property",autoCharge:false,action:"Parking €12/day at off-site lot. Budget ~€48 for 4 nights."},
+  {id:'d11',property:"Hotel Calitxo",location:"Molló",checkIn:"1 Jun",cancelByText:"29 May 23:59",deadline:"2026-05-29",fee:798.00,payment:"Pay at property",autoCharge:false,action:"2 apartments, 6 riders. Confirm bed configuration."},
+  {id:'d12',property:"Hôtel de l'Orb",location:"Bédarieux",checkIn:"4 Jun",cancelByText:"1 Jun 23:59",deadline:"2026-06-01",fee:252.00,payment:"Pay at property",autoCharge:false,action:"Card only — cash NOT accepted. Breakfast €12 must be pre-booked."},
+  {id:'d13',property:"Le Mas De L'Olivier",location:"Pont-Saint-Esprit",checkIn:"5 Jun",cancelByText:"2 Jun 23:59",deadline:"2026-06-02",fee:310.00,payment:"Bank transfer",autoCharge:false,action:"Bank transfer required before arrival. Confirm instructions received."},
+  {id:'d14',property:"Auberge Du Riou",location:"47 Route de Sainte Anne, Puget Rostang",checkIn:"6 Jun",cancelByText:"48hrs before",deadline:"2026-06-04",fee:530.00,payment:"Direct / Amenitiz",autoCharge:false,action:"NOT Booking.com. Call +33 7 61 64 78 03. Confirm price, location, bike parking."},
+  {id:'d15',property:"Logis Hôtel des Causses",location:"Millau",checkIn:"13 Jun",cancelByText:"9 Jun 23:59",deadline:"2026-06-09",fee:278.00,payment:"Pay at property",autoCharge:false,action:"Prepayment charged at any time. Parking requires prior reservation."},
+  {id:'d16',property:"Rose des Pyrénées",location:"Belvianes-et-Cavirac",checkIn:"14 Jun",cancelByText:"12 Jun 23:59",deadline:"2026-06-12",fee:278.00,payment:"Pay at property",autoCharge:false,action:"Only 1-day cancel window — very tight."},
+  {id:'d17',property:"Parador Cardona (combined)",location:"Cardona",checkIn:"15 Jun",cancelByText:"12 Jun 23:59",deadline:"2026-06-12",fee:441.00,payment:"Pay at property",autoCharge:false,action:"TWO bookings combined. One room is Derek's cost."},
+  {id:'d18',property:"Hotel Rey Don Jaime",location:"Morella",checkIn:"16 Jun",cancelByText:"14 Jun 23:59",deadline:"2026-06-14",fee:240.05,payment:"Pay at property",autoCharge:false,action:"Breakfast included. 3 rooms, 5 riders."},
+  {id:'d19',property:"Parador de Siguenza #3",location:"Sigüenza",checkIn:"17 Jun",cancelByText:"14 Jun 23:59",deadline:"2026-06-14",fee:238.00,payment:"Pay at property",autoCharge:false,action:"Room for 4 this booking only."},
+  {id:'d20',property:"Parador de Siguenza #2",location:"Sigüenza",checkIn:"17 Jun",cancelByText:"14 Jun 23:59",deadline:"2026-06-14",fee:144.00,payment:"Pay at property",autoCharge:false,action:"Room Derek this booking only."},
+];
+
+const MAIN_RAW = [
+  {id:'n01',date:'2026-05-17',property:"Hôtel Les Grenettes",location:"Sainte-Marie-de-Ré",country:"FR",bookingCost:94.61,preCharge:94.61,ref:"6068542051",notes:"1 twin. Auto-charged 13 May."},
+  {id:'n02',date:'2026-05-18',property:"LOGIS Hôtel L'Océana",location:"Lanton",country:"FR",bookingCost:206.50,preCharge:0,ref:"5438672399",notes:"1 apartment. Pay at property."},
+  {id:'n03',date:'2026-05-19',property:"Silken Puerta de Irati",location:"Ochagavía",country:"ES",bookingCost:203.50,preCharge:203.50,ref:"5910960276",notes:"1 triple. Breakfast incl. Auto-charged 15 May."},
+  {id:'n04',date:'2026-05-20',property:"Hôtel Mir",location:"Saint-Lary-Soulan",country:"FR",bookingCost:149.86,preCharge:149.86,ref:"6285356666",notes:"1 triple. Auto-charged 4 May."},
+  {id:'n05',date:'2026-05-21',property:"Parador de Siguenza",location:"Sigüenza",country:"ES",bookingCost:432.00,preCharge:0,ref:"6150228869",notes:"3 rooms. Mark, Ant & Charles join tonight."},
+  {id:'n06',date:'2026-05-22',property:"Hotel Avenida",location:"San Sebastián",country:"ES",bookingCost:799.50,preCharge:0,ref:"6923772589",notes:"Night 1/2."},
+  {id:'n07',date:'2026-05-23',property:"Hotel Avenida",location:"San Sebastián",country:"ES",bookingCost:799.50,preCharge:0,ref:"6923772589",notes:"Night 2/2."},
+  {id:'n08',date:'2026-05-24',property:"Logis Hotel L'Ayguelade",location:"Bielle",country:"FR",bookingCost:384.60,preCharge:0,ref:"5977152271",notes:"Night 1/1."},
+  {id:'n09',date:'2026-05-25',property:"Parador de Bielsa",location:"Valle de Pineta",country:"ES",bookingCost:342.00,preCharge:0,ref:"6456444778",notes:"Night 1/3."},
+  {id:'n10',date:'2026-05-26',property:"Parador de Bielsa",location:"Valle de Pineta",country:"ES",bookingCost:342.00,preCharge:0,ref:"6456444778",notes:"Night 2/3."},
+  {id:'n11',date:'2026-05-27',property:"Parador de Bielsa",location:"Valle de Pineta",country:"ES",bookingCost:342.00,preCharge:0,ref:"6456444778",notes:"Night 3/3."},
+  {id:'n12',date:'2026-05-28',property:"Parador De La Seu D'Urgell",location:"La Seu d'Urgell",country:"ES",bookingCost:300.75,preCharge:0,ref:"5838951348",notes:"Night 1/4. Parking €12/day extra."},
+  {id:'n13',date:'2026-05-29',property:"Parador De La Seu D'Urgell",location:"La Seu d'Urgell",country:"ES",bookingCost:300.75,preCharge:0,ref:"5838951348",notes:"Night 2/4."},
+  {id:'n14',date:'2026-05-30',property:"Parador De La Seu D'Urgell",location:"La Seu d'Urgell",country:"ES",bookingCost:300.75,preCharge:0,ref:"5838951348",notes:"Night 3/4."},
+  {id:'n15',date:'2026-05-31',property:"Parador De La Seu D'Urgell",location:"La Seu d'Urgell",country:"ES",bookingCost:300.75,preCharge:0,ref:"5838951348",notes:"Night 4/4."},
+  {id:'n16',date:'2026-06-01',property:"Hotel Calitxo",location:"Molló",country:"ES",bookingCost:265.94,preCharge:0,ref:"5691793336",notes:"Night 1/3."},
+  {id:'n17',date:'2026-06-02',property:"Hotel Calitxo",location:"Molló",country:"ES",bookingCost:265.94,preCharge:0,ref:"5691793336",notes:"Night 2/3."},
+  {id:'n18',date:'2026-06-03',property:"Hotel Calitxo",location:"Molló",country:"ES",bookingCost:265.94,preCharge:0,ref:"5691793336",notes:"Night 3/3."},
+  {id:'n19',date:'2026-06-04',property:"Hôtel de l'Orb",location:"Bédarieux",country:"FR",bookingCost:251.52,preCharge:0,ref:"5850848717",notes:"Charles departs. Card only — no cash."},
+  {id:'n20',date:'2026-06-05',property:"Hôtel Rest. Le Mas De L'Olivier",location:"Pont-Saint-Esprit",country:"FR",bookingCost:310.20,preCharge:310.20,ref:"5419282431",notes:"Bank transfer = pre-paid."},
+  {id:'n21',date:'2026-06-06',property:"Auberge Du Riou",location:"47 Route de Sainte Anne, Puget Rostang",country:"FR",bookingCost:264.00,preCharge:0,ref:"8693866413",notes:"DIRECT booking. Night 1/2."},
+  {id:'n22',date:'2026-06-07',property:"Auberge Du Riou",location:"47 Route de Sainte Anne, Puget Rostang",country:"FR",bookingCost:265.00,preCharge:0,ref:"8693866413",notes:"DIRECT booking. Night 2/2."},
+  {id:'n23',date:'2026-06-08',property:"Hotel Vauban Briançon",location:"Briançon",country:"FR",bookingCost:358.02,preCharge:358.02,ref:"5271484866",notes:"Night 1/2. Auto-charged 9 May. Motorcycle garage."},
+  {id:'n24',date:'2026-06-09',property:"Hotel Vauban Briançon",location:"Briançon",country:"FR",bookingCost:358.02,preCharge:358.02,ref:"5271484866",notes:"Night 2/2."},
+  {id:'n25',date:'2026-06-10',property:"Auberge De La Forêt - Hôtel",location:"Auris-en-Oisans",country:"FR",bookingCost:150.00,preCharge:150.00,ref:"5582283882",notes:"Night 1/2. Auto-charged 11 May."},
+  {id:'n26',date:'2026-06-11',property:"Auberge De La Forêt - Hôtel",location:"Auris-en-Oisans",country:"FR",bookingCost:150.00,preCharge:150.00,ref:"5582283882",notes:"Night 2/2."},
+  {id:'n27',date:'2026-06-12',property:"Le Jorjane Choranche Vercors",location:"Choranche",country:"FR",bookingCost:236.51,preCharge:0,ref:"6969632403",notes:"Booked, other hotel cancelled."},
+  {id:'n28',date:'2026-06-13',property:"Logis Hôtel des Causses",location:"Millau",country:"FR",bookingCost:279.60,preCharge:0,ref:"6444102909",notes:"3 rooms."},
+  {id:'n29',date:'2026-06-14',property:"Hotel Restaurant Rose des Pyrénées",location:"Belvianes-et-Cavirac",country:"FR",bookingCost:277.90,preCharge:0,ref:"5850816017",notes:"3 rooms."},
+  {id:'n30',date:'2026-06-15',property:"Parador de Cardona (combined)",location:"Cardona",country:"ES",bookingCost:437.28,preCharge:0,ref:"6313718181+5593551623",notes:"Two bookings combined. One room is Derek's cost."},
+  {id:'n31',date:'2026-06-16',property:"Hotel Rey Don Jaime",location:"Morella",country:"ES",bookingCost:231.44,preCharge:0,ref:"6241255818",notes:"3 rooms. Breakfast included."},
+  {id:'n32',date:'2026-06-17',property:"Parador de Siguenza",location:"Sigüenza",country:"ES",bookingCost:144.00,preCharge:0,ref:"5635427078",notes:"Room Derek this booking only."},
+  {id:'n33',date:'2026-06-17',property:"Parador de Siguenza",location:"Sigüenza",country:"ES",bookingCost:238.00,preCharge:0,ref:"5280961913",notes:"Room for 4 this booking only."},
+];
+const RETURN_RAW = [
+  {id:'r01',date:'2026-06-19',property:"TBD",location:"Jaca, Aragon",country:"ES",bookingCost:0,preCharge:0,ref:"",notes:"Day 1: Sigüenza → Jaca ~225km"},
+  {id:'r02',date:'2026-06-20',property:"TBD",location:"Foix, Ariège",country:"FR",bookingCost:0,preCharge:0,ref:"",notes:"Day 2: Somport Pass → Foix ~220km"},
+  {id:'r03',date:'2026-06-21',property:"TBD",location:"Nîmes area",country:"FR",bookingCost:0,preCharge:0,ref:"",notes:"Day 3: Cathar country ~240km"},
+  {id:'r04',date:'2026-06-22',property:"TBD",location:"Grenoble",country:"FR",bookingCost:0,preCharge:0,ref:"",notes:"Day 4: Ardèche gorges ~200km"},
+  {id:'r05',date:'2026-06-23',property:"TBD",location:"Grenoble",country:"FR",bookingCost:0,preCharge:0,ref:"",notes:"Day 5: Rest day — Alpe d'Huez optional"},
+  {id:'r06',date:'2026-06-24',property:"TBD",location:"Aosta, Valle d'Aosta",country:"IT",bookingCost:0,preCharge:0,ref:"",notes:"Day 6: Lautaret → Petit St-Bernard ~220km"},
+  {id:'r07',date:'2026-06-25',property:"TBD",location:"Bormio, Lombardy",country:"IT",bookingCost:0,preCharge:0,ref:"",notes:"Day 7: Nufenen Pass → Bormio ~270km"},
+  {id:'r08',date:'2026-06-26',property:"TBD",location:"Bolzano, South Tyrol",country:"IT",bookingCost:0,preCharge:0,ref:"",notes:"Day 8: STELVIO 2757m → Bolzano ~130km"},
+  {id:'r09',date:'2026-06-27',property:"TBD",location:"Cortina d'Ampezzo",country:"IT",bookingCost:0,preCharge:0,ref:"",notes:"Day 9: Sella Ronda Dolomites ~160km"},
+  {id:'r10',date:'2026-06-28',property:"TBD",location:"Innsbruck, Tyrol",country:"AT",bookingCost:0,preCharge:0,ref:"",notes:"Day 10: Cortina → Innsbruck ~220km"},
+  {id:'r11',date:'2026-06-29',property:"TBD",location:"Bregenz / Lake Constance",country:"AT",bookingCost:0,preCharge:0,ref:"",notes:"Day 11: Arlberg Pass → Bregenz ~200km"},
+  {id:'r12',date:'2026-06-30',property:"TBD",location:"Freiburg im Breisgau",country:"DE",bookingCost:0,preCharge:0,ref:"",notes:"Day 12: Black Forest ~160km"},
+  {id:'r13',date:'2026-07-01',property:"TBD",location:"Strasbourg, Alsace",country:"FR",bookingCost:0,preCharge:0,ref:"",notes:"Day 13: Alsace Wine Route ~90km"},
+  {id:'r14',date:'2026-07-02',property:"TBD",location:"Strasbourg, Alsace",country:"FR",bookingCost:0,preCharge:0,ref:"",notes:"Day 14: Rest day"},
+  {id:'r15',date:'2026-07-03',property:"TBD",location:"Reims, Champagne",country:"FR",bookingCost:0,preCharge:0,ref:"",notes:"Day 15: → Reims ~280km"},
+  {id:'r16',date:'2026-07-04',property:"TBD",location:"Calais",country:"FR",bookingCost:0,preCharge:0,ref:"",notes:"Day 16: → Calais → Eurotunnel ~250km"},
+];
+
+function groupFor(d,ph){
+  if(ph===2)return['Steve','Derek','Terry'];
+  const dt=new Date(d+'T12:00:00');
+  if(dt<=new Date('2026-05-20T12:00:00'))return['Steve','Derek','Terry'];
+  if(dt<=new Date('2026-06-03T12:00:00'))return['Steve','Derek','Terry','Mark','Ant','Charles'];
+  return['Steve','Derek','Terry','Mark','Ant'];
+}
+function mkNight(n,ph){
+  return{...n,phase:ph,group:ph===2?['Steve','Derek','Terry']:groupFor(n.date,ph),actualTotal:null,payments:Object.fromEntries(RIDERS.map(r=>[r,{amount:0,method:null}]))};
+}
+
+// ── FIX 1: fuel stored as object {} not array [] ──────────────────
+const DEF={
+  nights:[...MAIN_RAW.map(n=>mkNight(n,1)),...RETURN_RAW.map(n=>mkNight(n,2))],
+  deposits:Object.fromEntries(RIDERS.map(r=>[r,0])),
+  resolvedDeadlines:{},
+  fuel:{},
+};
+
+const ef=(n,d=2)=>(n!=null&&!isNaN(n))?`€${Math.abs(n).toFixed(d)}`:'—';
+const ecost=n=>n.actualTotal!==null?n.actualTotal:(n.bookingCost||0);
+const ppn=n=>n.group.length>0?ecost(n)/n.group.length:0;
+const rshare=(n,r)=>n.group.includes(r)?ppn(n):0;
+const rpaid=(n,r)=>n.payments[r]?.amount||0;
+const rbal=(n,r)=>rshare(n,r)-(n.payments[r]?.amount||0);
+const fmtD=s=>new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+const fmtShort=s=>new Date(s+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+function daysUntil(s){const t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(s+'T00:00:00')-t)/86400000);}
+function dlSt(d){if(d<0)return'overdue';if(d<=14)return'critical';if(d<=45)return'warning';return'safe';}
+const DLS={overdue:{bg:'#2D0A0A',border:'#EF444455',badge:'#EF4444',bt:'#fff',dc:'#FCA5A5',label:'OVERDUE'},critical:{bg:'#2D1200',border:'#F9731655',badge:'#F97316',bt:'#fff',dc:'#FED7AA',label:'CRITICAL'},warning:{bg:'#1C1500',border:'#F59E0B55',badge:'#F59E0B',bt:'#000',dc:'#FCD34D',label:'WARNING'},safe:{bg:'#0A1F14',border:'#10B98133',badge:'#10B981',bt:'#fff',dc:'#6EE7B7',label:'SAFE'}};
+function nSt(n){if(n.property==='NO BOOKING — BOOK NOW')return'urgent';if(n.actualTotal===null&&n.bookingCost===0&&n.property==='TBD')return'tbd';if(n.actualTotal===null&&n.bookingCost===0)return'tbc';if(n.actualTotal!==null)return n.group.every(r=>Math.abs(rbal(n,r))<0.01)?'settled':'active';return'pending';}
+const NS={urgent:{dot:'#EF4444',label:'Urgent'},tbc:{dot:'#F97316',label:'TBC'},tbd:{dot:'#94A3B8',label:'TBD'},pending:{dot:'#3B82F6',label:'Pending'},active:{dot:'#F59E0B',label:'Active'},settled:{dot:'#10B981',label:'Settled'}};
+
+// ── FIX 2: convert fuel object→array for all display/calculation ──
+function fuelObj2Arr(f){
+  if(!f)return[];
+  if(Array.isArray(f))return f;
+  return Object.values(f);
+}
+// ── Deposit drawdown ──────────────────────────────────────────────
+function calcDrawdown(rider,nights,deposit){
+  const myNights=nights.filter(n=>n.group.includes(rider)).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  let pool=deposit;
+  const perNight={};
+  myNights.forEach(n=>{
+    const cost=n.actualTotal!==null?n.actualTotal:(n.bookingCost||0);
+    const share=n.group.length>0?cost/n.group.length:0;
+    const eft=n.payments[rider]?.method==='eft'?(n.payments[rider]?.amount||0):0;
+    const needed=Math.max(0,share-eft);
+    const used=Math.min(pool,needed);
+    pool=Math.max(0,pool-used);
+    perNight[n.id]={depositUsed:used,eftAmount:eft,share,totalCovered:eft+used,covered:(eft+used)>=share-0.01};
+  });
+  return{perNight,depositRemaining:pool};
+}
+function fuelNetPosition(rider,fuelArr){
+  let net=0;
+  (fuelArr||[]).forEach(e=>{
+    if(!e.ridersPresent||!e.ridersPresent.includes(rider))return;
+    const share=(e.totalCost||0)/(e.ridersPresent.length||1);
+    if(e.pumpPerson===rider)net+=(e.totalCost||0)-share;
+    else net-=share;
+  });
+  return net;
+}
+function fuelPumpCount(rider,fuelArr){return(fuelArr||[]).filter(e=>e.pumpPerson===rider).length;}
+
+// Firebase loaded via script tags — no dynamic imports needed
+let _fbApp=null,_fbDb=null,_onVal=null,_setFn=null;
+function initFB(){
+  if(_fbDb)return true;
+  try{
+    _fbApp=firebase.apps.length?firebase.apps[0]:firebase.initializeApp(FIREBASE_CONFIG);
+    _fbDb=firebase.database(_fbApp);
+    _onVal=cb=>{_fbDb.ref(DB_PATH).on('value',s=>cb(s.val()));};
+    _setFn=d=>_fbDb.ref(DB_PATH).set(d);
+    return true;
+  }catch(e){console.error('Firebase init failed',e);return false;}
+}
+
+function App(){
+  const [identity,setIdentity]=useState(null);
+  const [data,setData]=useState(null);
+  const [syncing,setSyncing]=useState(false);
+  const [syncOk,setSyncOk]=useState(false);
+  const [fbLoaded,setFbLoaded]=useState(false);
+  const [tab,setTab]=useState('deadlines');
+  const [phase,setPhase]=useState(1);
+  const [expanded,setExpanded]=useState(null);
+  const unsubRef=useRef(null);
+
+  useEffect(()=>{
+    const s=localStorage.getItem('et2026-id');
+    if(s&&RIDERS.includes(s))setIdentity(s);
+  },[]);
+
+  useEffect(()=>{
+    if(!identity)return;
+    if(!FIREBASE_ON){
+      try{const l=localStorage.getItem('et2026-local');setData(l?JSON.parse(l):DEF);}catch{setData(DEF);}
+      return;
+    }
+    setSyncing(true);
+    const ok=initFB();
+    if(!ok){
+      try{const l=localStorage.getItem('et2026-local');setData(l?JSON.parse(l):DEF);}catch{setData(DEF);}
+      setSyncing(false);
+      return;
+    }
+    setFbLoaded(true);
+    _onVal(val=>{
+      if(!val){_setFn(DEF);setData(DEF);}
+      else{
+        const merged={...DEF,...val,
+          nights:DEF.nights.map(def=>{
+                const live=(val.nights||[]).find(n=>n.id===def.id);
+                if(!live)return def;
+                const payments=Object.fromEntries(RIDERS.map(r=>{const p=live.payments?.[r];if(p==null||p===0)return[r,{amount:0,method:null}];if(typeof p==='number')return[r,{amount:p,method:null}];return[r,p];}));
+                return{...def,...live,payments};
+              }),
+              deposits:{...DEF.deposits,...(val.deposits||{})},
+              resolvedDeadlines:{...(val.resolvedDeadlines||{})},
+              fuel:(val.fuel&&typeof val.fuel==='object'&&!Array.isArray(val.fuel))?val.fuel:{},
+        };
+        setData(merged);
+      }
+      setSyncing(false);setSyncOk(true);setTimeout(()=>setSyncOk(false),2000);
+    });
+    return()=>{if(FIREBASE_ON&&_fbDb)_fbDb.ref(DB_PATH).off();};
+    return()=>{if(unsubRef.current)unsubRef.current();};
+  },[identity]);
+
+  const persist=useCallback(nd=>{
+    if(FIREBASE_ON&&fbLoaded)_setFn(nd).catch(()=>{});
+    else try{localStorage.setItem('et2026-local',JSON.stringify(nd));}catch{}
+  },[fbLoaded]);
+
+  const updateNight=useCallback((id,upd)=>setData(prev=>{
+    if(!prev)return prev;
+    const nd={...prev,nights:prev.nights.map(n=>n.id===id?{...n,...upd}:n)};
+    persist(nd);return nd;
+  }),[persist]);
+  const updateDeposit=useCallback((rider,val)=>setData(prev=>{
+    if(!prev)return prev;
+    const nd={...prev,deposits:{...prev.deposits,[rider]:parseFloat(val)||0}};
+    persist(nd);return nd;
+  }),[persist]);
+  const toggleResolved=useCallback(id=>setData(prev=>{
+    if(!prev)return prev;
+    const cur=prev.resolvedDeadlines||{};
+    const nd={...prev,resolvedDeadlines:cur[id]?Object.fromEntries(Object.entries(cur).filter(([k])=>k!==id)):{...cur,[id]:true}};
+    persist(nd);return nd;
+  }),[persist]);
+  const addNight=useCallback(nd=>setData(prev=>{
+    if(!prev)return prev;
+    const n={id:'r'+Date.now(),phase:2,group:['Steve','Derek','Terry'],actualTotal:null,payments:Object.fromEntries(RIDERS.map(r=>[r,{amount:0,method:null}])),preCharge:0,bookingCost:0,ref:'',...nd};
+    const next={...prev,nights:[...prev.nights,n]};persist(next);return next;
+  }),[persist]);
+  const deleteNight=useCallback(id=>setData(prev=>{
+    if(!prev)return prev;
+    const nd={...prev,nights:prev.nights.filter(n=>n.id!==id)};persist(nd);return nd;
+  }),[persist]);
+
+  // FIX 4: store fuel entry as object keyed by ID
+  const addFuelEntry=useCallback(entry=>setData(prev=>{
+    if(!prev)return prev;
+    const id='f'+Date.now();
+    const nd={...prev,fuel:{...(prev.fuel||{}),[id]:{id,...entry}}};
+    persist(nd);return nd;
+  }),[persist]);
+
+  // FIX 5: delete from object not array
+  const deleteFuelEntry=useCallback(id=>setData(prev=>{
+    if(!prev)return prev;
+    const f={...(prev.fuel||{})};
+    delete f[id];
+    const nd={...prev,fuel:f};
+    persist(nd);return nd;
+  }),[persist]);
+
+  if(!identity)return <IdentityScreen onSelect={r=>{localStorage.setItem('et2026-id',r);setIdentity(r);}}/>;
+  if(!data)return(
+    <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12,background:'#0F172A'}}>
+      <div style={{fontSize:36}}>🏍️</div>
+      <div style={{color:'#94A3B8',fontSize:12,letterSpacing:'.1em'}}>CONNECTING…</div>
+    </div>
+  );
+
+  const role=ROLE(identity);
+  const nights=data.nights;
+  // FIX 6: convert fuel object to array once here — all components receive a plain array
+  const fuel=fuelObj2Arr(data.fuel);
+  const resolved=data.resolvedDeadlines||{};
+  const activeDls=DEADLINES.filter(d=>!resolved[d.id]);
+  const urgentCt=activeDls.filter(d=>{const x=daysUntil(d.deadline);return x>=0&&x<=14;}).length;
+  const overdueCt=activeDls.filter(d=>daysUntil(d.deadline)<0).length;
+  const alertCt=urgentCt+overdueCt;
+  const phaseNights=nights.filter(n=>n.phase===phase);
+  const pSum=rider=>{
+    const dep=data.deposits[rider]||0;
+    const {perNight,depositRemaining}=calcDrawdown(rider,nights,dep);
+    const my=nights.filter(n=>n.group.includes(rider));
+    const actualShare=my.reduce((s,n)=>s+rshare(n,rider),0);
+    const totalCovered=Object.values(perNight).reduce((s,v)=>s+v.totalCovered,0);
+    const eftTotal=Object.values(perNight).reduce((s,v)=>s+v.eftAmount,0);
+    const depositUsed=dep-depositRemaining;
+    return{actualShare,totalCovered,eftTotal,depositUsed,depositRemaining,deposit:dep,balance:actualShare-totalCovered,count:my.length,budgetShare:my.reduce((s,n)=>s+(n.bookingCost>0?n.bookingCost/n.group.length:0),0)};
+  };
+  const{border,dark}=RC[identity];
+
+  return(
+    <div style={{maxWidth:480,margin:'0 auto',background:'#0F172A',minHeight:'100vh',fontFamily:'system-ui,-apple-system,sans-serif',color:'#F8FAFC',paddingBottom:84}}>
+      <div style={{padding:'0 16px 8px',paddingTop:'max(12px,env(safe-area-inset-top,12px))',borderBottom:'1px solid #1E293B',background:'#0F172A',position:'sticky',top:0,zIndex:30}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div>
+            <div style={{fontSize:17,fontWeight:700,letterSpacing:'-0.02em'}}>EuroTrash 2026 🏍</div>
+            <div style={{display:'flex',alignItems:'center',gap:6,marginTop:2}}>
+              <span style={{fontSize:11,padding:'3px 10px',borderRadius:20,background:RC[identity].solid,color:'#FFFFFF',border:'none',fontWeight:700,cursor:'pointer',boxShadow:'0 0 0 2px #FFFFFF'}}
+                onClick={()=>{if(window.confirm('Switch rider?')){localStorage.removeItem('et2026-id');setIdentity(null);}}}>
+                {identity}{role==='admin'?' ⚙':''}
+              </span>
+              {FIREBASE_ON
+                ?<span style={{fontSize:10,color:syncing?'#F59E0B':syncOk?'#10B981':'#334155'}}>{syncing?'⟳ syncing':syncOk?'✓ synced':'● live'}</span>
+                :<span style={{fontSize:10,color:'#475569'}}>● local</span>}
+            </div>
+          </div>
+          {tab==='nights'&&role==='admin'&&(
+            <div style={{display:'flex',gap:5}}>
+              {[{v:1,l:'Main'},{v:2,l:'Return'}].map(p=>(
+                <button key={p.v} onClick={()=>{setPhase(p.v);setExpanded(null);}} style={{padding:'5px 10px',borderRadius:20,border:'none',cursor:'pointer',fontSize:12,fontWeight:500,background:phase===p.v?'#3B82F6':'#1E293B',color:phase===p.v?'white':'#94A3B8'}}>{p.l}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {tab==='deadlines'&&<DeadlinesTab deadlines={activeDls} resolved={resolved} toggleResolved={toggleResolved} allDeadlines={DEADLINES} role={role}/>}
+      {tab==='nights'&&<NightsTab nights={phaseNights} allNights={nights} deposits={data.deposits} expanded={expanded} setExpanded={setExpanded} updateNight={updateNight} deleteNight={deleteNight} phase={phase} identity={identity} role={role}/>}
+      {tab==='people'&&<PeopleTab riders={RIDERS} pSum={pSum} deposits={data.deposits} updateDeposit={updateDeposit} identity={identity} role={role} nights={nights} fuel={fuel}/>}
+      {tab==='fuel'&&<FuelTab fuel={fuel} role={role} identity={identity} addFuelEntry={addFuelEntry} deleteFuelEntry={deleteFuelEntry}/>}
+      {tab==='add'&&role==='admin'&&<AddTab addNight={addNight} setTab={setTab}/>}
+      {tab==='add'&&role==='rider'&&<MyBalanceTab identity={identity} summary={pSum(identity)} fuelNet={fuelNetPosition(identity,fuel)}/>}
+
+      <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:480,background:'#0F172A',borderTop:'1px solid #1E293B',display:'flex',zIndex:30,paddingBottom:'env(safe-area-inset-bottom)'}}>
+        {[
+          {id:'deadlines',icon:'⏱',label:'Deadlines',badge:alertCt},
+          {id:'nights',icon:'◉',label:'Nights'},
+          {id:'people',icon:'◎',label:'People'},
+          {id:'fuel',icon:'⛽',label:'Fuel'},
+          {id:'add',icon:role==='admin'?'⊕':'◈',label:role==='admin'?'Add':'Balance'},
+        ].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:'9px 0 7px',border:'none',background:'none',cursor:'pointer',color:tab===t.id?'#3B82F6':'#475569',display:'flex',flexDirection:'column',alignItems:'center',gap:2,position:'relative'}}>
+            {t.badge>0&&<span style={{position:'absolute',top:5,right:'50%',marginRight:-16,background:'#EF4444',color:'white',fontSize:9,fontWeight:700,padding:'1px 4px',borderRadius:10,lineHeight:1.4}}>{t.badge}</span>}
+            <span style={{fontSize:17,lineHeight:1}}>{t.icon}</span>
+            <span style={{fontSize:9,fontWeight:tab===t.id?600:400,letterSpacing:'.04em'}}>{t.label.toUpperCase()}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function IdentityScreen({onSelect}){
+  const [pin,setPin]=useState('');const [pinFor,setPinFor]=useState(null);const [err,setErr]=useState(false);
+  const choose=r=>{if(r==='Terry'){setPinFor(r);setPin('');setErr(false);}else onSelect(r);};
+  const submit=()=>{if(pin===ADMIN_PIN)onSelect(pinFor);else{setErr(true);setPin('');}};
+  return(
+    <div style={{minHeight:'100vh',background:'#0F172A',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,fontFamily:'system-ui,-apple-system,sans-serif'}}>
+      <div style={{fontSize:48,marginBottom:8}}>🏍️</div>
+      <div style={{fontSize:22,fontWeight:700,color:'#F8FAFC',marginBottom:4}}>EuroTrash Tour 2026</div>
+      <div style={{fontSize:13,color:'#64748B',marginBottom:32}}>Who are you?</div>
+      {!pinFor?(
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,width:'100%',maxWidth:320}}>
+          {RIDERS.map(rider=>{const{solid,border}=RC[rider];return(
+            <button key={rider} onClick={()=>choose(rider)} style={{padding:'18px 12px',borderRadius:14,border:`2px solid ${solid}`,background:'#141C27',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
+              <div style={{width:44,height:44,borderRadius:'50%',background:solid,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:700,color:'#FFFFFF'}}>{rider[0]}</div>
+              <span style={{fontSize:14,fontWeight:700,color:'#FFFFFF'}}>{rider}</span>
+              {rider==='Terry'&&<span style={{fontSize:10,color:'#94A3B8'}}>admin</span>}
+            </button>
+          );})}
+        </div>
+      ):(
+        <div style={{width:'100%',maxWidth:280,textAlign:'center'}}>
+          <div style={{fontSize:32,marginBottom:8}}>🔒</div>
+          <div style={{fontSize:16,fontWeight:600,color:'#F8FAFC',marginBottom:4}}>Terry — Admin PIN</div>
+          <div style={{fontSize:12,color:'#64748B',marginBottom:20}}>Enter your 4-digit PIN</div>
+          <input type="password" inputMode="numeric" maxLength={4} value={pin} onChange={ev=>setPin(ev.target.value)} onKeyDown={ev=>ev.key==='Enter'&&submit()} placeholder="••••" autoFocus style={{width:'100%',textAlign:'center',fontSize:28,letterSpacing:12,padding:14,background:'#1E293B',border:`1px solid ${err?'#EF4444':'#334155'}`,borderRadius:12,color:'#FCD34D',fontWeight:700}}/>
+          {err&&<div style={{color:'#F87171',fontSize:12,marginTop:8}}>Incorrect PIN</div>}
+          <button onClick={submit} style={{marginTop:16,width:'100%',padding:13,borderRadius:12,border:'none',background:'#3B82F6',color:'white',fontSize:15,fontWeight:700,cursor:'pointer'}}>Confirm</button>
+          <button onClick={()=>setPinFor(null)} style={{marginTop:10,width:'100%',padding:10,borderRadius:12,border:'1px solid #1E293B',background:'none',color:'#64748B',fontSize:13,cursor:'pointer'}}>← Back</button>
+        </div>
+      )}
+      {!FIREBASE_ON&&(<div style={{marginTop:32,padding:14,background:'#1E0A0A',border:'1px solid #EF444433',borderRadius:12,maxWidth:320,width:'100%'}}><div style={{fontSize:11,color:'#F87171',fontWeight:600,marginBottom:6}}>⚠ FIREBASE NOT CONFIGURED</div><div style={{fontSize:11,color:'#94A3B8',lineHeight:1.5}}>Data saves locally only.</div></div>)}
+    </div>
+  );
+}
+
+function DeadlinesTab({deadlines,resolved,toggleResolved,allDeadlines,role}){
+  const [showRes,setShowRes]=useState(false);const [exp,setExp]=useState(null);
+  const resList=allDeadlines.filter(d=>resolved[d.id]);
+  const sorted=[...deadlines].sort((a,b)=>daysUntil(a.deadline)-daysUntil(b.deadline));
+  const totExp=deadlines.reduce((s,d)=>s+d.fee,0);
+  const autoTot=deadlines.filter(d=>d.autoCharge).reduce((s,d)=>s+d.fee,0);
+  return(
+    <div style={{padding:'10px 0 0'}}>
+      <div style={{margin:'0 12px 10px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+        <div style={{background:'#1E0A0A',border:'1px solid #EF444433',borderRadius:10,padding:'10px 12px'}}>
+          <div style={{fontSize:10,color:'#94A3B8',marginBottom:2}}>Total exposure</div>
+          <div style={{fontSize:18,fontWeight:700,color:'#FCA5A5'}}>{ef(totExp,0)}</div>
+          <div style={{fontSize:10,color:'#64748B',marginTop:1}}>{deadlines.length} active</div>
+        </div>
+        <div style={{background:'#1A1200',border:'1px solid #F59E0B33',borderRadius:10,padding:'10px 12px'}}>
+          <div style={{fontSize:10,color:'#94A3B8',marginBottom:2}}>Auto-charges pending</div>
+          <div style={{fontSize:18,fontWeight:700,color:'#FCD34D'}}>{ef(autoTot,0)}</div>
+          <div style={{fontSize:10,color:'#64748B',marginTop:1}}>{deadlines.filter(d=>d.autoCharge).length} properties</div>
+        </div>
+      </div>
+      {sorted.length===0&&<div style={{textAlign:'center',padding:'40px 20px',color:'#475569'}}><div style={{fontSize:32,marginBottom:8}}>✓</div><div>All deadlines resolved</div></div>}
+      {sorted.map(dl=>{
+        const days=daysUntil(dl.deadline);const sc=DLS[dlSt(days)];const isExp=exp===dl.id;
+        return(
+          <div key={dl.id} style={{margin:'0 12px 8px',borderRadius:12,background:sc.bg,border:`1px solid ${sc.border}`,overflow:'hidden'}}>
+            <div onClick={()=>setExp(isExp?null:dl.id)} style={{padding:'11px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:10}}>
+              <div style={{width:48,height:48,borderRadius:10,flexShrink:0,background:sc.badge,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+                <div style={{fontSize:days<0?10:16,fontWeight:800,color:sc.bt,lineHeight:1}}>{days<0?'OVER':Math.abs(days)}</div>
+                <div style={{fontSize:9,color:sc.bt,opacity:.85,letterSpacing:'.04em',marginTop:1}}>{days<0?'DUE':days===1?'DAY':'DAYS'}</div>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:600,color:'#F1F5F9',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{dl.property}</div>
+                <div style={{display:'flex',gap:6,marginTop:3,alignItems:'center',flexWrap:'wrap'}}>
+                  <span style={{fontSize:11,color:'#64748B'}}>{dl.location}</span>
+                  <span style={{fontSize:11,color:'#334155'}}>·</span>
+                  <span style={{fontSize:11,color:'#64748B'}}>In {dl.checkIn}</span>
+                  {dl.autoCharge&&<span style={{fontSize:10,padding:'1px 5px',borderRadius:8,background:'#F59E0B22',color:'#F59E0B',border:'1px solid #F59E0B44',fontWeight:500}}>AUTO</span>}
+                </div>
+              </div>
+              <div style={{textAlign:'right',flexShrink:0}}>
+                <div style={{fontSize:13,fontWeight:700,color:sc.dc}}>{dl.fee>0?ef(dl.fee,0):'—'}</div>
+                <div style={{fontSize:10,color:'#475569',marginTop:2}}>{sc.label}</div>
+              </div>
+              <div style={{color:'#475569',fontSize:14,marginLeft:4,transform:isExp?'rotate(90deg)':'none',transition:'transform .2s'}}>›</div>
+            </div>
+            {isExp&&(
+              <div style={{borderTop:`1px solid ${sc.border}`,padding:'12px 14px'}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
+                  {[{l:'Cancel free until',v:dl.cancelByText},{l:'Cancellation fee',v:dl.fee>0?ef(dl.fee):'None'},{l:'Payment method',v:dl.payment},{l:'Days remaining',v:days<0?`${Math.abs(days)} days overdue`:`${days} days`}].map(({l,v})=>(
+                    <div key={l} style={{background:'#0F172A55',borderRadius:8,padding:'8px 10px'}}><div style={{fontSize:10,color:'#475569',marginBottom:2}}>{l}</div><div style={{fontSize:12,fontWeight:600,color:'#CBD5E1'}}>{v}</div></div>
+                  ))}
+                </div>
+                <div style={{background:'#0F172A',borderRadius:8,padding:'10px 12px',marginBottom:12,borderLeft:`3px solid ${sc.badge}`}}>
+                  <div style={{fontSize:10,color:sc.dc,fontWeight:600,marginBottom:4,letterSpacing:'.05em'}}>ACTION</div>
+                  <div style={{fontSize:12,color:'#94A3B8',lineHeight:1.5}}>{dl.action}</div>
+                </div>
+                {role==='admin'&&<button onClick={e=>{e.stopPropagation();toggleResolved(dl.id);setExp(null);}} style={{width:'100%',padding:'10px',borderRadius:8,border:'1px solid #10B98144',background:'#10B98111',color:'#6EE7B7',fontSize:13,fontWeight:600,cursor:'pointer'}}>✓ Mark as Resolved</button>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {resList.length>0&&(
+        <div style={{margin:'8px 12px 0'}}>
+          <button onClick={()=>setShowRes(v=>!v)} style={{width:'100%',padding:'8px',background:'none',border:'1px solid #1E293B',borderRadius:8,color:'#475569',fontSize:12,cursor:'pointer',marginBottom:6}}>
+            {showRes?'Hide':'Show'} {resList.length} resolved
+          </button>
+          {showRes&&resList.map(dl=>(
+            <div key={dl.id} style={{marginBottom:6,borderRadius:10,background:'#0A1F14',border:'1px solid #10B98133',padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center',opacity:.65}}>
+              <div><div style={{fontSize:12,fontWeight:500,color:'#6EE7B7'}}>{dl.property}</div><div style={{fontSize:11,color:'#475569',marginTop:1}}>{dl.checkIn} · {dl.cancelByText}</div></div>
+              {role==='admin'&&<button onClick={()=>toggleResolved(dl.id)} style={{fontSize:11,padding:'4px 8px',borderRadius:6,border:'1px solid #33415533',background:'none',color:'#64748B',cursor:'pointer'}}>Undo</button>}
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{height:12}}/>
+    </div>
+  );
+}
+
+function NightsTab({nights,allNights,deposits,expanded,setExpanded,updateNight,deleteNight,phase,identity,role}){
+  const vis=role==='admin'?nights:nights.filter(n=>n.group.includes(identity));
+  return(
+    <div style={{padding:'8px 0'}}>
+      {role==='rider'&&<div style={{fontSize:11,color:'#64748B',padding:'4px 16px 8px',fontStyle:'italic'}}>Your nights only.</div>}
+      {vis.length===0&&<div style={{textAlign:'center',padding:'60px 20px',color:'#475569'}}>No nights to show.</div>}
+      {vis.map(n=><NightCard key={n.id} night={n} isExpanded={expanded===n.id} onToggle={()=>setExpanded(expanded===n.id?null:n.id)} updateNight={updateNight} deleteNight={deleteNight} phase={phase} identity={identity} role={role} nights={allNights} deposits={deposits}/>)}
+    </div>
+  );
+}
+
+function NightCard({night,isExpanded,onToggle,updateNight,deleteNight,phase,identity,role,nights,deposits}){
+  const [eAct,setEAct]=useState('');const [ePre,setEPre]=useState('');const [eProp,setEProp]=useState('');const [eLoc,setELoc]=useState('');const [eCost,setECost]=useState('');const [eNotes,setENotes]=useState('');const [editM,setEditM]=useState(false);const [showDel,setShowDel]=useState(false);const prev=useRef(false);
+  useEffect(()=>{if(isExpanded&&!prev.current){setEAct(night.actualTotal!==null?String(night.actualTotal):'');setEPre(String(night.preCharge||''));setEProp(night.property||'');setELoc(night.location||'');setECost(night.bookingCost?String(night.bookingCost):'');setENotes(night.notes||'');setEditM(false);setShowDel(false);}prev.current=isExpanded;},[isExpanded,night]);
+  const st=nSt(night);const sc=NS[st];const cost=ecost(night);const ppp=ppn(night);const isAdm=role==='admin';
+  const saveAct=()=>{const v=parseFloat(eAct);updateNight(night.id,{actualTotal:isNaN(v)?null:v});};
+  const savePre=()=>{const v=parseFloat(ePre);updateNight(night.id,{preCharge:isNaN(v)?0:v});};
+  const saveEd=()=>{updateNight(night.id,{property:eProp,location:eLoc,bookingCost:parseFloat(eCost)||0,notes:eNotes});setEditM(false);};
+  const updPay=(rider,val)=>updateNight(night.id,{payments:{...night.payments,[rider]:{amount:parseFloat(val)||0,method:'eft'}}});
+  const editRiders=isAdm?night.group:night.group.filter(r=>r===identity);
+  return(
+    <div style={{margin:'4px 12px',borderRadius:12,background:'#141C27',border:`1px solid ${isExpanded?'#3B82F633':'#1E293B'}`,overflow:'hidden'}}>
+      <div onClick={onToggle} style={{padding:'11px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:10}}>
+        <div style={{width:8,height:8,borderRadius:'50%',flexShrink:0,background:sc.dot}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8}}>
+            <div style={{fontSize:13,fontWeight:600,color:st==='urgent'?'#FCA5A5':st==='settled'?'#6EE7B7':'#F1F5F9',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{night.property}</div>
+            <div style={{fontSize:12,fontWeight:600,color:'#94A3B8',flexShrink:0}}>{night.actualTotal!==null?<span style={{color:'#34D399'}}>{ef(cost)}</span>:ef(night.bookingCost)}</div>
+          </div>
+          <div style={{display:'flex',gap:8,marginTop:3,alignItems:'center'}}>
+            <span style={{fontSize:11,color:'#64748B'}}>{fmtD(night.date)}</span>
+            <span style={{fontSize:11,color:'#475569'}}>·</span>
+            <span style={{fontSize:11,color:'#64748B',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{night.location}</span>
+            {!isAdm&&<span style={{marginLeft:'auto',fontSize:10,padding:'2px 6px',borderRadius:10,background:'#0F172A',color:sc.dot,fontWeight:500,flexShrink:0}}>You: {ef(rshare(night,identity))}</span>}
+          </div>
+        </div>
+        <div style={{color:'#475569',fontSize:14,flexShrink:0,transform:isExpanded?'rotate(90deg)':'none',transition:'transform .2s'}}>›</div>
+      </div>
+      {isExpanded&&(
+        <div style={{borderTop:'1px solid #1E293B',padding:'12px 14px 16px'}}>
+          {isAdm&&(<div style={{display:'flex',justifyContent:'flex-end',marginBottom:10,gap:8}}>
+            {phase===2&&<button onClick={()=>setShowDel(!showDel)} style={{fontSize:11,padding:'4px 8px',borderRadius:6,border:'1px solid #EF444433',background:'none',color:'#F87171',cursor:'pointer'}}>{showDel?'Cancel':'Delete'}</button>}
+            <button onClick={()=>setEditM(!editM)} style={{fontSize:11,padding:'4px 8px',borderRadius:6,border:'1px solid #3B82F633',background:editM?'#3B82F622':'none',color:'#60A5FA',cursor:'pointer'}}>{editM?'Cancel':'Edit'}</button>
+          </div>)}
+          {showDel&&<div style={{background:'#7F1D1D22',border:'1px solid #EF444433',borderRadius:8,padding:10,marginBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{fontSize:12,color:'#FCA5A5'}}>Delete this night?</span><button onClick={()=>deleteNight(night.id)} style={{fontSize:12,padding:'4px 12px',borderRadius:6,border:'none',background:'#EF4444',color:'white',cursor:'pointer',fontWeight:600}}>Delete</button></div>}
+          {editM&&isAdm&&(
+            <div style={{background:'#1E293B',borderRadius:10,padding:12,marginBottom:12}}>
+              {[{l:'Property',v:eProp,s:setEProp},{l:'Location',v:eLoc,s:setELoc}].map(f=>(<div key={f.l} style={{marginBottom:8}}><div style={{fontSize:11,color:'#64748B',marginBottom:3}}>{f.l}</div><input value={f.v} onChange={ev=>f.s(ev.target.value)} style={{width:'100%',background:'#0F172A',border:'1px solid #334155',borderRadius:6,padding:'8px 10px',color:'#F1F5F9',fontSize:13}}/></div>))}
+              <div style={{marginBottom:8}}><div style={{fontSize:11,color:'#64748B',marginBottom:3}}>Booking cost €</div><input type="number" value={eCost} onChange={ev=>setECost(ev.target.value)} style={{width:'100%',background:'#0F172A',border:'1px solid #334155',borderRadius:6,padding:'8px 10px',color:'#F1F5F9',fontSize:13}}/></div>
+              <div style={{marginBottom:10}}><div style={{fontSize:11,color:'#64748B',marginBottom:3}}>Notes</div><textarea value={eNotes} onChange={ev=>setENotes(ev.target.value)} rows={2} style={{width:'100%',background:'#0F172A',border:'1px solid #334155',borderRadius:6,padding:'8px 10px',color:'#F1F5F9',fontSize:12,resize:'none'}}/></div>
+              <button onClick={saveEd} style={{width:'100%',padding:9,borderRadius:8,border:'none',background:'#3B82F6',color:'white',fontWeight:600,fontSize:13,cursor:'pointer'}}>Save Changes</button>
+            </div>
+          )}
+          {night.notes&&!editM&&<div style={{fontSize:11,color:'#64748B',marginBottom:12,fontStyle:'italic'}}>{night.notes}</div>}
+          {isAdm&&(<>
+            <div style={{display:'flex',gap:8,marginBottom:12}}>
+              <div style={{flex:1}}><div style={{fontSize:11,color:'#64748B',marginBottom:4}}>Pre-charged to card</div><div style={{display:'flex',gap:6,alignItems:'center'}}><span style={{color:'#94A3B8'}}>€</span><input type="number" step="0.01" value={ePre} onChange={e=>setEPre(e.target.value)} onBlur={savePre} style={{flex:1,background:'#1E293B',border:'1px solid #22C55E44',borderRadius:8,padding:'7px 10px',color:'#86EFAC',fontSize:14,fontWeight:500}}/></div></div>
+              <div style={{flex:1}}><div style={{fontSize:11,color:'#64748B',marginBottom:4}}>Ref</div><div style={{fontSize:11,color:'#475569',paddingTop:10}}>{night.ref||'—'}</div></div>
+            </div>
+            <div style={{background:'#1C1A0F',border:'1px solid #F59E0B55',borderRadius:10,padding:'12px',marginBottom:14}}>
+              <div style={{fontSize:11,color:'#F59E0B',fontWeight:600,letterSpacing:'.06em',marginBottom:4}}>ACTUAL TOTAL PAID AT PROPERTY</div>
+              <div style={{fontSize:10,color:'#78716C',marginBottom:8}}>Full bill incl. tax, breakfast, dinner, parking</div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <span style={{fontSize:22,color:'#F59E0B',fontWeight:300}}>€</span>
+                <input type="number" step="0.01" placeholder="0.00" value={eAct} onChange={ev=>setEAct(ev.target.value)} onBlur={saveAct} style={{flex:1,background:'#0F172A',border:'1px solid #F59E0B66',borderRadius:8,padding:'10px 12px',color:'#FCD34D',fontSize:22,fontWeight:600}}/>
+              </div>
+              {night.actualTotal!==null&&<div style={{marginTop:10,display:'flex',justifyContent:'space-between'}}><span style={{fontSize:12,color:'#78716C'}}>{night.group.length} riders · per person</span><span style={{fontSize:16,fontWeight:700,color:'#34D399'}}>{ef(ppp)}</span></div>}
+              {night.actualTotal===null&&night.bookingCost>0&&<div style={{marginTop:8,fontSize:11,color:'#78716C'}}>Budget: {ef(night.bookingCost)} · est. p/p: {ef(night.bookingCost/night.group.length)}</div>}
+            </div>
+          </>)}
+          {!isAdm&&(<div style={{background:'#1E293B',borderRadius:10,padding:12,marginBottom:14,textAlign:'center'}}><div style={{fontSize:11,color:'#64748B',marginBottom:4}}>Your share this night</div><div style={{fontSize:28,fontWeight:700,color:'#F8FAFC'}}>{ef(rshare(night,identity))}</div><div style={{fontSize:11,color:night.actualTotal!==null?'#6EE7B7':'#64748B',marginTop:4}}>{night.actualTotal!==null?'Actual cost':'Estimated from booking'}</div></div>)}
+          <div style={{fontSize:11,color:'#64748B',fontWeight:600,letterSpacing:'.06em',marginBottom:8}}>{isAdm?'PAYMENTS TO TERRY':'YOUR PAYMENT TO TERRY'}</div>
+          {editRiders.map(rider=>{
+            const{perNight}=calcDrawdown(rider,nights,deposits[rider]||0);
+            const rd=perNight[night.id]||{depositUsed:0,eftAmount:0,share:rshare(night,rider),totalCovered:0,covered:false};
+            const{depositUsed,eftAmount,share,covered}=rd;
+            const bal=share-eftAmount-depositUsed;
+            const eftEntered=night.payments[rider]?.amount||0;
+            const{solid}=RC[rider];
+            return(<div key={rider} style={{marginBottom:10,background:'#0F172A44',borderRadius:10,padding:'10px 12px',border:`1px solid ${solid}33`}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                <div style={{display:'flex',alignItems:'center',gap:7}}>
+                  <div style={{width:26,height:26,borderRadius:'50%',background:solid,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#FFFFFF'}}>{rider[0]}</div>
+                  {isAdm&&<span style={{fontSize:12,fontWeight:600,color:'#FFFFFF'}}>{rider}</span>}
+                </div>
+                <div style={{fontSize:12,color:'#64748B'}}>Share: <span style={{color:'#F1F5F9',fontWeight:600}}>{ef(share)}</span></div>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:8}}>
+                {[{l:'Deposit',v:depositUsed>0?ef(depositUsed):'—',c:depositUsed>0?'#FCD34D':'#334155',bg:'#1C1500'},{l:'EFT',v:eftAmount>0?ef(eftAmount):'—',c:eftAmount>0?'#60A5FA':'#334155',bg:'#0D1B2A'},{l:'Balance',v:covered?'Paid':ef(bal),c:covered?'#10B981':bal>0?'#F87171':'#10B981',bg:'#0A1F14'}].map(({l,v,c,bg})=>(
+                  <div key={l} style={{background:bg,borderRadius:6,padding:'5px 7px',textAlign:'center'}}>
+                    <div style={{fontSize:9,color:'#64748B',marginBottom:1}}>{l}</div>
+                    <div style={{fontSize:12,fontWeight:600,color:c}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{fontSize:10,color:'#475569',marginBottom:5}}>EFT payment this night (optional):</div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <span style={{color:'#94A3B8',fontSize:14}}>€</span>
+                <input type="number" step="0.01" placeholder="0.00" defaultValue={eftEntered>0?eftEntered:''} key={`${night.id}-${rider}-${eftEntered}`} onBlur={ev=>updPay(rider,ev.target.value)} style={{flex:1,background:'#1E293B',border:`1px solid ${solid}55`,borderRadius:8,padding:'7px 10px',color:'#FFFFFF',fontSize:14}}/>
+                {eftEntered>0&&<span style={{fontSize:11,padding:'3px 8px',borderRadius:8,background:'#1D4ED8',color:'#FFFFFF',fontWeight:600}}>EFT</span>}
+              </div>
+            </div>);
+          })}
+          {!isAdm&&night.group.filter(r=>r!==identity).map(rider=>{const{perNight:pr}=calcDrawdown(rider,nights,deposits[rider]||0);const rd=pr[night.id];const covered=rd?.covered;const depUsed=rd?.depositUsed||0;const eftAmt=rd?.eftAmount||0;return(<div key={rider} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,background:'#1E293B55',borderRadius:8,padding:'8px 10px',opacity:.7}}><div style={{width:28,height:28,borderRadius:'50%',background:RC[rider].solid,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#FFFFFF',flexShrink:0}}>{rider[0]}</div><div style={{flex:1,fontSize:12,color:'#CBD5E1',fontWeight:500}}>{rider}</div><div style={{fontSize:11,color:covered?'#10B981':depUsed>0||eftAmt>0?'#F59E0B':'#64748B',fontWeight:600}}>{covered?'Covered':depUsed>0?`Dep ${ef(depUsed)}`:eftAmt>0?`EFT ${ef(eftAmt)}`:'Pending'}</div></div>);})}
+          {isAdm&&RIDERS.filter(r=>!night.group.includes(r)).length>0&&<div style={{fontSize:11,color:'#334155',marginTop:4}}>Not present: {RIDERS.filter(r=>!night.group.includes(r)).join(', ')}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PeopleTab({riders,pSum,deposits,updateDeposit,identity,role,nights,fuel}){
+  const [openFuel,setOpenFuel]=useState(null);
+  return(
+    <div style={{padding:'12px'}}>
+      {role==='rider'&&<div style={{fontSize:11,color:'#64748B',marginBottom:12,fontStyle:'italic'}}>Your deposit is editable. Others are read-only.</div>}
+      {riders.map(rider=>(
+        <RiderCard key={rider} rider={rider} identity={identity} role={role}
+          nights={nights} fuel={fuel}
+          deposit={deposits[rider]||0}
+          updateDeposit={updateDeposit}
+          s={pSum(rider)}
+          openFuel={openFuel} setOpenFuel={setOpenFuel}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RiderCard({rider,identity,role,nights,fuel,deposit,updateDeposit,s,openFuel,setOpenFuel}){
+  const [openAccom,setOpenAccom]=useState(false);
+  const {solid}=RC[rider];
+  const isMe=rider===identity;
+  const canEdit=role==='admin'||isMe;
+  const settled=Math.abs(s.balance)<0.01;
+  const fuelNet=fuelNetPosition(rider,fuel);
+  const fuelSettled=Math.abs(fuelNet)<0.01;
+  return(
+    <div style={{background:'#141C27',border:`1.5px solid ${isMe?solid:'#1E293B'}`,borderRadius:12,padding:14,marginBottom:10}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+        <div style={{width:38,height:38,borderRadius:'50%',background:solid,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,fontWeight:700,color:'#FFFFFF',flexShrink:0}}>{rider[0]}</div>
+        <div style={{flex:1}}>
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <div style={{fontSize:16,fontWeight:700,color:'#FFFFFF'}}>{rider}</div>
+            {isMe&&<span style={{fontSize:9,padding:'2px 7px',borderRadius:10,background:solid,color:'#FFFFFF',fontWeight:700,border:'1px solid rgba(255,255,255,0.5)'}}>you</span>}
+          </div>
+          <div style={{fontSize:11,color:'#475569',marginTop:1}}>{s.count} nights</div>
+        </div>
+      </div>
+      <div style={{background:'#0F172A55',borderRadius:10,padding:'10px 12px',marginBottom:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div><div style={{fontSize:10,color:'#64748B',marginBottom:2}}>Accommodation balance</div><div style={{fontSize:10,color:'#475569'}}>Share: {ef(s.actualShare)} · Covered: {ef(s.totalCovered)}</div></div>
+        <div style={{fontSize:18,fontWeight:700,color:settled?'#10B981':s.balance>0?'#F87171':'#10B981',textAlign:'right'}}>{settled?'Settled':ef(s.balance)}</div>
+      </div>
+      <div style={{background:'#0F172A55',borderRadius:10,padding:'10px 12px',marginBottom:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div><div style={{fontSize:10,color:'#64748B',marginBottom:2}}>Fuel net position</div><div style={{fontSize:10,color:'#475569'}}>{fuelSettled?'All square':'Settle at group phase change'}</div></div>
+        <div style={{fontSize:16,fontWeight:700,color:fuelSettled?'#10B981':fuelNet>0?'#6EE7B7':'#F87171',textAlign:'right'}}>{fuelSettled?'Even':fuelNet>0?`Owed ${ef(fuelNet)}`:`Owes ${ef(Math.abs(fuelNet))}`}</div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>
+        {[{l:'Deposit held',v:ef(deposit)},{l:'Deposit used',v:ef(s.depositUsed)},{l:'Deposit left',v:ef(s.depositRemaining),warn:s.depositRemaining<50&&deposit>0},{l:'Via EFT',v:ef(s.eftTotal)}].map(({l,v,warn})=>(
+          <div key={l} style={{background:'#0F172A55',borderRadius:8,padding:'8px'}}>
+            <div style={{fontSize:9,color:'#475569',marginBottom:2}}>{l}</div>
+            <div style={{fontSize:13,fontWeight:600,color:warn?'#F87171':'#F1F5F9'}}>{v}</div>
+          </div>
+        ))}
+      </div>
+      {s.depositRemaining<50&&s.depositRemaining>0&&deposit>0&&<div style={{fontSize:11,color:'#F87171',background:'#2D0A0A',borderRadius:8,padding:'7px 10px',marginBottom:10,fontWeight:600}}>Deposit running low — {ef(s.depositRemaining)} remaining</div>}
+      {s.balance>0&&s.depositRemaining<=0&&deposit>0&&<div style={{fontSize:11,color:'#F87171',background:'#2D0A0A',borderRadius:8,padding:'7px 10px',marginBottom:10,fontWeight:600}}>Deposit exhausted — {ef(s.balance)} still outstanding</div>}
+      <div style={{background:'#0F172A55',borderRadius:8,padding:'10px',marginBottom:10}}>
+        <div style={{fontSize:11,color:'#F59E0B',fontWeight:600,marginBottom:6}}>PRE-TOUR DEPOSIT</div>
+        {canEdit?(<div style={{display:'flex',alignItems:'center',gap:8}}><span style={{color:'#F59E0B',fontSize:16}}>€</span><input type="number" step="0.01" defaultValue={deposit||''} key={`dep-${rider}-${deposit}`} placeholder="0.00" onBlur={ev=>updateDeposit(rider,ev.target.value)} style={{flex:1,background:'#1E293B',border:'1px solid #F59E0B44',borderRadius:8,padding:'8px 12px',color:'#FCD34D',fontSize:16,fontWeight:600}}/></div>
+        ):(<div style={{fontSize:16,fontWeight:600,color:'#FCD34D'}}>{deposit>0?ef(deposit):'Not yet paid'}</div>)}
+      </div>
+      <div style={{display:'flex',gap:8}}>
+        <button onClick={()=>setOpenAccom(!openAccom)} style={{flex:1,padding:'8px',borderRadius:8,border:'none',background:solid,color:'#FFFFFF',fontSize:11,fontWeight:700,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:openAccom?'0 0 0 2px #FFFFFF':'none'}}>
+          <span>Accom ledger</span><span style={{transform:openAccom?'rotate(90deg)':'none',transition:'transform .2s',fontSize:13}}>›</span>
+        </button>
+        <button onClick={()=>setOpenFuel(openFuel===rider?null:rider)} style={{flex:1,padding:'8px',borderRadius:8,border:'none',background:'#D97706',color:'#FFFFFF',fontSize:11,fontWeight:700,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:openFuel===rider?'0 0 0 2px #FFFFFF':'none'}}>
+          <span>Fuel ledger</span><span style={{transform:openFuel===rider?'rotate(90deg)':'none',transition:'transform .2s',fontSize:13}}>›</span>
+        </button>
+      </div>
+      {openAccom&&<AccomLedger rider={rider} nights={nights} deposit={deposit}/>}
+      {openFuel===rider&&<FuelLedger rider={rider} fuel={fuel} border={solid} bg={RC[rider].bg||'#1E293B'}/>}
+    </div>
+  );
+}
+
+
+function AccomLedger({rider,nights,deposit}){
+  const {perNight}=calcDrawdown(rider,nights,deposit);
+  const lines=[{sortKey:'0000',type:'open',label:'Opening balance',amount:0}];
+  nights.filter(n=>n.group.includes(rider)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(n=>{
+    const nd=perNight[n.id];
+    if(!nd)return;
+    if(nd.share>0) lines.push({date:n.date,sortKey:n.date+'-1',type:'debit',label:n.property,amount:nd.share});
+    if(nd.depositUsed>0) lines.push({date:n.date,sortKey:n.date+'-2',type:'credit',label:'Deposit applied',amount:nd.depositUsed});
+    if(nd.eftAmount>0) lines.push({date:n.date,sortKey:n.date+'-3',type:'credit',label:'EFT received',amount:nd.eftAmount});
+  });
+  lines.sort((a,b)=>a.sortKey.localeCompare(b.sortKey));
+  let running=0;
+  const rendered=lines.map(l=>{if(l.type==='open')return{...l,running:0};if(l.type==='credit')running-=l.amount;else running+=l.amount;return{...l,running};});
+  const final=rendered[rendered.length-1]?.running||0;
+  const fmtShort=s=>new Date(s+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  return(
+    <div style={{marginTop:10,background:'#0A0F1A',borderRadius:10,overflow:'hidden',border:'1px solid #1E293B33'}}>
+      <div style={{padding:'6px 10px',background:'#1E293B',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{fontSize:10,color:'#94A3B8',fontWeight:600,letterSpacing:'.06em'}}>ACCOMMODATION LEDGER</span>
+        <span style={{fontSize:11,fontWeight:700,color:Math.abs(final)<0.01?'#10B981':final>0?'#F87171':'#86EFAC'}}>{Math.abs(final)<0.01?'Settled':ef(final)}</span>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'52px 1fr 64px 64px',gap:4,padding:'5px 10px',background:'#141C27',fontSize:9,color:'#475569',fontWeight:600,letterSpacing:'.05em'}}>
+        <div>DATE</div><div>DESCRIPTION</div><div style={{textAlign:'right'}}>AMOUNT</div><div style={{textAlign:'right'}}>BALANCE</div>
+      </div>
+      {rendered.map((l,i)=>{
+        const isCredit=l.type==='credit';
+        const balCol=l.running>0.01?'#F87171':l.running<-0.01?'#86EFAC':'#6EE7B7';
+        return(<div key={i} style={{display:'grid',gridTemplateColumns:'52px 1fr 64px 64px',gap:4,padding:'6px 10px',borderBottom:'1px solid #1E293B33',background:i%2===0?'transparent':'#0F172A33'}}>
+          <div style={{fontSize:10,color:'#475569'}}>{l.type==='open'?'—':fmtShort(l.date)}</div>
+          <div style={{fontSize:11,color:isCredit?'#86EFAC':'#CBD5E1',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.label}</div>
+          <div style={{fontSize:11,fontWeight:600,color:isCredit?'#86EFAC':l.type==='debit'?'#FCA5A5':'#475569',textAlign:'right'}}>{l.type==='open'?'—':`${isCredit?'-':'+'}${ef(l.amount)}`}</div>
+          <div style={{fontSize:11,fontWeight:700,color:l.type==='open'?'#475569':balCol,textAlign:'right'}}>{ef(l.running)}</div>
+        </div>);
+      })}
+    </div>
+  );
+}
+
+function FuelLedger({rider,fuel,border,bg}){
+  const entries=(fuel||[]).filter(e=>e.ridersPresent&&e.ridersPresent.includes(rider)).sort((a,b)=>a.date.localeCompare(b.date));
+  if(entries.length===0){return(<div style={{marginTop:10,background:'#0A0F1A',borderRadius:10,overflow:'hidden',border:'1px solid #F59E0B22'}}><div style={{padding:'6px 10px',background:'#1C1500',display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{fontSize:10,color:'#F59E0B',fontWeight:600,letterSpacing:'.06em'}}>⛽ FUEL LEDGER</span><span style={{fontSize:11,fontWeight:700,color:'#10B981'}}>Even</span></div><div style={{padding:'20px',textAlign:'center',color:'#475569',fontSize:12}}>No fuel entries yet for {rider}</div></div>);}
+  let running=0;
+  const lines=entries.map(e=>{const share=(e.totalCost||0)/(e.ridersPresent.length||1);const isPump=e.pumpPerson===rider;const amount=isPump?(e.totalCost||0)-share:share;if(isPump)running-=amount;else running+=amount;return{e,share,isPump,amount,running};});
+  const final=running;
+  return(
+    <div style={{marginTop:10,background:'#0A0F1A',borderRadius:10,overflow:'hidden',border:'1px solid #F59E0B22'}}>
+      <div style={{padding:'6px 10px',background:'#1C1500',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{fontSize:10,color:'#F59E0B',fontWeight:600,letterSpacing:'.06em'}}>⛽ FUEL LEDGER</span>
+        <span style={{fontSize:11,fontWeight:700,color:Math.abs(final)<0.01?'#10B981':final>0?'#F87171':'#6EE7B7'}}>{Math.abs(final)<0.01?'Even':final>0?`Owes ${ef(final)}`:`Owed ${ef(Math.abs(final))}`}</span>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'52px 1fr 64px 64px',gap:4,padding:'5px 10px',background:'#141C27',fontSize:9,color:'#475569',fontWeight:600,letterSpacing:'.05em'}}>
+        <div>DATE</div><div>DESCRIPTION</div><div style={{textAlign:'right'}}>AMOUNT</div><div style={{textAlign:'right'}}>POSITION</div>
+      </div>
+      {lines.map(({e,share,isPump,amount,running:r},i)=>{const posCol=r>0.01?'#F87171':r<-0.01?'#6EE7B7':'#10B981';
+        return(<div key={e.id} style={{display:'grid',gridTemplateColumns:'52px 1fr 64px 64px',gap:4,padding:'6px 10px',borderBottom:'1px solid #1C1500',background:i%2===0?'transparent':'#0F172A33'}}>
+          <div style={{fontSize:10,color:'#475569'}}>{fmtShort(e.date)}</div>
+          <div style={{fontSize:11,lineHeight:1.3}}><div style={{color:isPump?'#6EE7B7':'#FCD34D'}}>{isPump?`Pump duty (${e.ridersPresent.length} bikes)`:`Stop — pump: ${e.pumpPerson}`}</div><div style={{fontSize:9,color:'#475569',marginTop:1}}>{ef(share)}/bike · total {ef(e.totalCost)}</div></div>
+          <div style={{fontSize:11,fontWeight:600,color:isPump?'#6EE7B7':'#FCA5A5',textAlign:'right'}}>{isPump?`−${ef(amount)}`:`+${ef(amount)}`}</div>
+          <div style={{fontSize:11,fontWeight:700,color:posCol,textAlign:'right'}}>{ef(Math.abs(r))}{r>0.01?' ↑':r<-0.01?' ↓':' ✓'}</div>
+        </div>);
+      })}
+      <div style={{padding:'7px 10px',background:'#1C1500',display:'grid',gridTemplateColumns:'52px 1fr 64px 64px',gap:4}}>
+        <div/><div style={{fontSize:11,color:'#64748B',fontWeight:600}}>Net position</div><div/>
+        <div style={{fontSize:12,fontWeight:700,color:Math.abs(final)<0.01?'#10B981':final>0?'#F87171':'#6EE7B7',textAlign:'right'}}>{Math.abs(final)<0.01?'Even':final>0?`Owes ${ef(final)}`:`Owed ${ef(Math.abs(final))}`}</div>
+      </div>
+    </div>
+  );
+}
+
+function FuelTab({fuel,role,identity,addFuelEntry,deleteFuelEntry}){
+  const [showAdd,setShowAdd]=useState(false);
+  const [form,setForm]=useState({date:'',pumpPerson:identity,totalCost:'',ridersPresent:['Steve','Derek','Terry']});
+  const [done,setDone]=useState(false);
+  const isAdmin=role==='admin';
+  const setF=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const toggleRider=r=>setForm(f=>({...f,ridersPresent:f.ridersPresent.includes(r)?f.ridersPresent.filter(x=>x!==r):[...f.ridersPresent,r]}));
+  const sorted=[...(fuel||[])].sort((a,b)=>a.date.localeCompare(b.date)).reverse();
+  const grandTotal=sorted.reduce((s,e)=>s+(e.totalCost||0),0);
+  const submit=()=>{
+    if(!form.date||!form.totalCost||form.ridersPresent.length===0)return;
+    const pump=isAdmin?form.pumpPerson:identity;
+    const total=parseFloat(form.totalCost)||0;
+    addFuelEntry({date:form.date,pumpPerson:pump,totalCost:total,ridersPresent:[...form.ridersPresent],costPerBike:total/(form.ridersPresent.length||1)});
+    setDone(true);
+    setTimeout(()=>{setDone(false);setForm({date:'',pumpPerson:identity,totalCost:'',ridersPresent:['Steve','Derek','Terry']});setShowAdd(false);},1000);
+  };
+  return(
+    <div style={{padding:'10px 12px'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
+        <div style={{background:'#1A1200',border:'1px solid #F59E0B33',borderRadius:10,padding:'10px 12px'}}>
+          <div style={{fontSize:10,color:'#94A3B8',marginBottom:2}}>Total fuel spend</div>
+          <div style={{fontSize:20,fontWeight:700,color:'#FCD34D'}}>{ef(grandTotal)}</div>
+          <div style={{fontSize:10,color:'#64748B',marginTop:1}}>{sorted.length} stops</div>
+        </div>
+        <div style={{background:'#1E293B',border:'1px solid #334155',borderRadius:10,padding:'10px 12px'}}>
+          <div style={{fontSize:10,color:'#94A3B8',marginBottom:4}}>Pump duty</div>
+          {RIDERS.map(r=>{const cnt=fuelPumpCount(r,fuel);if(cnt===0)return null;return(<div key={r} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#CBD5E1',marginBottom:2}}><span style={{color:RC[r].dark}}>{r}</span><span style={{fontWeight:600}}>{cnt}×</span></div>);})}
+          {sorted.length===0&&<div style={{fontSize:11,color:'#475569'}}>No entries yet</div>}
+        </div>
+      </div>
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:11,color:'#64748B',fontWeight:600,letterSpacing:'.06em',marginBottom:8}}>NET FUEL POSITIONS</div>
+        <div style={{background:'#141C27',borderRadius:10,overflow:'hidden',border:'1px solid #1E293B'}}>
+          {RIDERS.map((r,i)=>{const net=fuelNetPosition(r,fuel);const settled=Math.abs(net)<0.01;const{dark,border,bg}=RC[r];
+            return(<div key={r} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 12px',borderBottom:i<RIDERS.length-1?'1px solid #1E293B44':'none',background:r===identity?bg+'11':'transparent'}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{width:28,height:28,borderRadius:'50%',background:RC[r].solid,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#FFFFFF'}}>{r[0]}</div>
+                <span style={{fontSize:13,color:'#FFFFFF',fontWeight:r===identity?700:400}}>{r}</span>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:13,fontWeight:700,color:settled?'#10B981':net>0?'#6EE7B7':'#F87171'}}>{settled?'Even':net>0?`Owed ${ef(net)}`:`Owes ${ef(Math.abs(net))}`}</div>
+                <div style={{fontSize:9,color:'#475569',marginTop:1}}>{settled?'':net>0?'group owes them':'they owe group'}</div>
+              </div>
+            </div>);
+          })}
+        </div>
+      </div>
+      <button onClick={()=>setShowAdd(!showAdd)} style={{width:'100%',padding:'11px',borderRadius:10,border:'none',background:showAdd?'#1E293B':'#F59E0B',color:showAdd?'#64748B':'#0F172A',fontSize:14,fontWeight:700,cursor:'pointer',marginBottom:showAdd?0:12}}>
+        {showAdd?'Cancel':`+ Log Fuel Stop (as ${identity})`}
+      </button>
+      {showAdd&&(
+        <div style={{background:'#1C1A0F',border:'1px solid #F59E0B44',borderRadius:12,padding:14,marginBottom:12,marginTop:8}}>
+          <div style={{fontSize:12,color:'#F59E0B',fontWeight:600,marginBottom:4,letterSpacing:'.06em'}}>NEW FUEL ENTRY</div>
+          {!isAdmin&&(<div style={{background:'#0F172A',borderRadius:8,padding:'8px 12px',marginBottom:12,display:'flex',alignItems:'center',gap:8}}>
+            <div style={{width:28,height:28,borderRadius:'50%',background:RC[identity].solid,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#FFFFFF',flexShrink:0}}>{identity[0]}</div>
+            <div><div style={{fontSize:12,fontWeight:600,color:'#FFFFFF'}}>You are the pump person</div><div style={{fontSize:10,color:'#64748B',marginTop:1}}>Only log stops where you paid at the pump</div></div>
+          </div>)}
+          {[{l:'Date *',k:'date',t:'date'},{l:'Total cost €',k:'totalCost',t:'number',p:'0.00'}].map(f=>(<div key={f.k} style={{marginBottom:10}}><div style={{fontSize:11,color:'#94A3B8',marginBottom:4}}>{f.l}</div><input type={f.t} value={form[f.k]} placeholder={f.p||''} onChange={ev=>setF(f.k,ev.target.value)} style={{width:'100%',background:'#0F172A',border:'1px solid #334155',borderRadius:8,padding:'9px 12px',color:'#F1F5F9',fontSize:14}}/></div>))}
+          {isAdmin&&(<div style={{marginBottom:10}}><div style={{fontSize:11,color:'#94A3B8',marginBottom:4}}>Pump person</div><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{RIDERS.map(r=>(<button key={r} onClick={()=>setF('pumpPerson',r)} style={{padding:'5px 10px',borderRadius:20,border:'none',background:RC[r].solid,color:'#FFFFFF',fontSize:12,fontWeight:700,cursor:'pointer',boxShadow:form.pumpPerson===r?'0 0 0 2px #FFFFFF':'none'}}>{r}</button>))}</div></div>)}
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:11,color:'#94A3B8',marginBottom:4}}>Riders present (tick all bikes at this stop)</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+              {RIDERS.map(r=>{const checked=form.ridersPresent.includes(r);return(<button key={r} onClick={()=>toggleRider(r)} style={{padding:'8px 10px',borderRadius:8,border:'none',background:RC[r].solid,color:'#FFFFFF',fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,boxShadow:checked?'0 0 0 2px #FFFFFF':'none'}}>
+                <span style={{width:14,height:14,borderRadius:3,background:checked?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.2)',border:'1.5px solid rgba(255,255,255,0.7)',display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:10,color:'white',fontWeight:700}}>{checked?'✓':''}</span>{r}
+              </button>);})}
+            </div>
+          </div>
+          {form.totalCost&&form.ridersPresent.length>0&&(<div style={{background:'#0F172A',borderRadius:8,padding:'10px',marginBottom:12,display:'flex',justifyContent:'space-between'}}><span style={{fontSize:12,color:'#64748B'}}>{form.ridersPresent.length} bikes · per bike</span><span style={{fontSize:16,fontWeight:700,color:'#FCD34D'}}>{ef((parseFloat(form.totalCost)||0)/form.ridersPresent.length)}</span></div>)}
+          <button onClick={submit} disabled={!form.date||!form.totalCost||form.ridersPresent.length===0} style={{width:'100%',padding:'12px',borderRadius:10,border:'none',background:done?'#10B981':(!form.date||!form.totalCost||form.ridersPresent.length===0)?'#1E293B':'#F59E0B',color:(!form.date||!form.totalCost||form.ridersPresent.length===0)?'#475569':'#0F172A',fontSize:14,fontWeight:700,cursor:'pointer',transition:'background .2s'}}>
+            {done?'✓ Logged!':'Log Fuel Stop'}
+          </button>
+        </div>
+      )}
+      <div style={{fontSize:11,color:'#64748B',fontWeight:600,letterSpacing:'.06em',marginBottom:8,marginTop:12}}>FUEL LOG</div>
+      {sorted.length===0&&(<div style={{textAlign:'center',padding:'30px 20px',color:'#475569',background:'#141C27',borderRadius:10,border:'1px solid #1E293B'}}><div style={{fontSize:24,marginBottom:8}}>⛽</div><div style={{fontSize:13,marginBottom:4}}>No fuel entries yet</div><div style={{fontSize:11}}>Tap the button above to log the first stop</div></div>)}
+      {sorted.map(entry=>{const cpb=(entry.totalCost||0)/(entry.ridersPresent?.length||1);
+        return(<div key={entry.id} style={{background:'#141C27',border:'1px solid #1E293B',borderRadius:10,padding:'12px',marginBottom:8}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+            <div><div style={{fontSize:13,fontWeight:600,color:'#FCD34D'}}>{fmtD(entry.date)}</div><div style={{fontSize:11,color:'#64748B',marginTop:4,display:'flex',alignItems:'center',gap:6}}>Pump: <span style={{fontSize:11,padding:'2px 9px',borderRadius:10,background:RC[entry.pumpPerson]?.solid||'#475569',color:'#FFFFFF',fontWeight:700}}>{entry.pumpPerson}</span></div></div>
+            <div style={{textAlign:'right'}}><div style={{fontSize:16,fontWeight:700,color:'#F8FAFC'}}>{ef(entry.totalCost)}</div><div style={{fontSize:11,color:'#64748B'}}>{ef(cpb)} / bike</div></div>
+          </div>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:isAdmin?8:0}}>
+            {(entry.ridersPresent||[]).map(r=>(<span key={r} style={{fontSize:11,padding:'3px 9px',borderRadius:10,background:RC[r].solid,color:'#FFFFFF',fontWeight:600}}>{r}</span>))}
+          </div>
+          {isAdmin&&(<button onClick={()=>{if(window.confirm('Delete this fuel entry?'))deleteFuelEntry(entry.id);}} style={{fontSize:11,padding:'4px 8px',borderRadius:6,border:'1px solid #EF444433',background:'none',color:'#F87171',cursor:'pointer'}}>Delete</button>)}
+        </div>);
+      })}
+    </div>
+  );
+}
+
+function MyBalanceTab({identity,summary,fuelNet}){
+  const {solid}=RC[identity];
+  const settled=Math.abs(summary.balance)<0.01;
+  const fuelSettled=Math.abs(fuelNet)<0.01;
+  return(
+    <div style={{padding:'20px 16px'}}>
+      {/* FIX 4: Avatar — solid colour + white initial, consistent with rest of app */}
+      <div style={{textAlign:'center',marginBottom:24}}>
+        <div style={{width:72,height:72,borderRadius:'50%',background:solid,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:'#FFFFFF',margin:'0 auto 10px',boxShadow:`0 0 0 3px #FFFFFF`}}>{identity[0]}</div>
+        <div style={{fontSize:20,fontWeight:700,color:'#FFFFFF'}}>{identity}</div>
+      </div>
+
+      {/* FIX 5: Bigger, bolder section headings */}
+      <div style={{fontSize:13,color:'#FFFFFF',fontWeight:700,letterSpacing:'.06em',marginBottom:10}}>🏨 ACCOMMODATION</div>
+      <div style={{background:'#141C27',border:`1px solid ${solid}55`,borderRadius:14,padding:16,textAlign:'center',marginBottom:10}}>
+        <div style={{fontSize:12,color:'#94A3B8',marginBottom:6}}>Balance owing Terry</div>
+        <div style={{fontSize:32,fontWeight:800,color:settled?'#10B981':summary.balance>0?'#F87171':'#10B981'}}>{settled?'All settled ✓':ef(summary.balance)}</div>
+      </div>
+
+      {/* FIX 3+6: White text, updated labels using new pSum fields */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
+        {[
+          {l:'Nights',         v:String(summary.count)},
+          {l:'Budget share',   v:ef(summary.budgetShare)},
+          {l:'Actual share',   v:ef(summary.actualShare)},
+          {l:'Deposit held',   v:ef(summary.deposit)},
+          {l:'Deposit used',   v:ef(summary.depositUsed)},
+          {l:'Paid via EFT',   v:ef(summary.eftTotal)},
+        ].map(({l,v})=>(
+          <div key={l} style={{background:'#141C27',border:'1px solid #1E293B',borderRadius:10,padding:'12px'}}>
+            <div style={{fontSize:11,color:'#94A3B8',marginBottom:4}}>{l}</div>
+            <div style={{fontSize:15,fontWeight:600,color:'#FFFFFF'}}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{borderTop:'1px solid #1E293B',marginBottom:16}}/>
+
+      {/* FIX 5: Bigger fuel heading */}
+      <div style={{fontSize:13,color:'#F59E0B',fontWeight:700,letterSpacing:'.06em',marginBottom:10}}>⛽ FUEL</div>
+      <div style={{background:'#1A1200',border:'1px solid #F59E0B44',borderRadius:14,padding:16,textAlign:'center',marginBottom:10}}>
+        <div style={{fontSize:12,color:'#94A3B8',marginBottom:6}}>Net position with group</div>
+        <div style={{fontSize:32,fontWeight:800,color:fuelSettled?'#10B981':fuelNet>0?'#6EE7B7':'#F87171'}}>{fuelSettled?'Even':ef(Math.abs(fuelNet))}</div>
+        {!fuelSettled&&<div style={{fontSize:11,color:'#94A3B8',marginTop:6}}>{fuelNet>0?'The group owes you — settle at next phase change':'You owe the group — settle at next phase change'}</div>}
+      </div>
+
+      <div style={{background:'#141C27',border:'1px solid #1E293B',borderRadius:10,padding:'12px',fontSize:12,color:'#94A3B8',lineHeight:1.5}}>To log a payment, open the Nights tab and enter the amount in your payment row.</div>
+    </div>
+  );
+}
+
+
+function AddTab({addNight,setTab}){
+  const [form,setForm]=useState({date:'',property:'',location:'',country:'FR',bookingCost:'',notes:''});
+  const [done,setDone]=useState(false);
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const submit=()=>{
+    if(!form.date)return;
+    addNight({date:form.date,property:form.property||'TBD',location:form.location||'',country:form.country||'',bookingCost:parseFloat(form.bookingCost)||0,notes:form.notes||''});
+    setDone(true);
+    setTimeout(()=>{setDone(false);setForm({date:'',property:'',location:'',country:'FR',bookingCost:'',notes:''});setTab('nights');},1000);
+  };
+  return(
+    <div style={{padding:'16px 12px'}}>
+      <div style={{fontSize:13,color:'#64748B',marginBottom:16,lineHeight:1.5}}>Add a return leg night. Steve, Derek & Terry assigned automatically.</div>
+      {[{l:'Date *',k:'date',t:'date'},{l:'Property',k:'property',t:'text',p:'Hotel / TBD'},{l:'Location',k:'location',t:'text',p:'City, Region'},{l:'Country',k:'country',t:'text',p:'FR / IT / DE...'},{l:'Booking cost €',k:'bookingCost',t:'number',p:'0.00'},{l:'Notes',k:'notes',t:'text',p:'Route notes, ref...'}].map(f=>(
+        <div key={f.k} style={{marginBottom:12}}><div style={{fontSize:11,color:'#94A3B8',marginBottom:5,fontWeight:500}}>{f.l}</div><input type={f.t} value={form[f.k]} placeholder={f.p||''} onChange={ev=>set(f.k,ev.target.value)} style={{width:'100%',background:'#1E293B',border:'1px solid #334155',borderRadius:10,padding:'11px 14px',color:'#F1F5F9',fontSize:14}}/></div>
+      ))}
+      <div style={{background:'#1E293B',borderRadius:10,padding:'10px 14px',marginBottom:16,display:'flex',gap:8}}>
+        {['Steve','Derek','Terry'].map(r=><span key={r} style={{fontSize:12,padding:'3px 8px',borderRadius:12,background:RC[r].bg+'44',color:RC[r].dark,border:`1px solid ${RC[r].border}44`}}>{r}</span>)}
+      </div>
+      <button onClick={submit} disabled={!form.date} style={{width:'100%',padding:'14px',borderRadius:12,border:'none',cursor:'pointer',background:done?'#10B981':form.date?'#3B82F6':'#1E293B',color:form.date?'white':'#475569',fontSize:15,fontWeight:700,transition:'background .2s'}}>
+        {done?'✓ Added!':'Add Night'}
+      </button>
+    </div>
+  );
+}
+
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App));
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(console.error);});}
+</script>
+</body>
+</html>
