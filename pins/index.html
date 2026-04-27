@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>EuroTrash Pins 2026</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    .app-container { max-width: 600px; margin: 0 auto; }
+    .header { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); padding: 20px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .header p { font-size: 13px; opacity: 0.9; }
+    .tabs { display: flex; background: #1e293b; border-bottom: 2px solid #334155; position: sticky; top: 72px; z-index: 99; overflow-x: auto; }
+    .tab { flex: 1; padding: 14px 8px; text-align: center; background: none; border: none; color: #94a3b8; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; position: relative; white-space: nowrap; min-width: 80px; }
+    .tab.active { color: #ec4899; }
+    .tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background: #ec4899; }
+    .content { padding: 16px; }
+    .card { background: #1e293b; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #334155; }
+    .leaderboard-item { display: flex; align-items: center; padding: 12px; background: #1e293b; border-radius: 8px; margin-bottom: 8px; border: 1px solid #334155; }
+    .leaderboard-item.assistant { border: 2px solid #f59e0b; background: #1e1b16; }
+    .rank { font-size: 20px; font-weight: 700; width: 40px; text-align: center; color: #7c3aed; }
+    .rider-info { flex: 1; margin-left: 12px; }
+    .rider-name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+    .assistant-badge { display: inline-block; background: #3b82f6; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-left: 6px; text-transform: uppercase; }
+    .rider-stats { font-size: 13px; color: #94a3b8; }
+    .fines-total { font-size: 18px; font-weight: 700; color: #ef4444; text-align: right; }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; }
+    .btn-primary { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); color: white; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    .btn-success { background: #059669; color: white; }
+    .btn-danger { background: #dc2626; color: white; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #cbd5e1; }
+    .form-select, .form-input, .form-textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 15px; }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .activity-item { background: #1e293b; border-radius: 8px; padding: 14px; margin-bottom: 10px; border-left: 4px solid #7c3aed; }
+    .activity-item.violation { border-left-color: #ef4444; }
+    .activity-item.award { border-left-color: #10b981; }
+    .activity-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .activity-type { font-weight: 700; font-size: 14px; }
+    .activity-time { font-size: 12px; color: #64748b; }
+    .activity-description { font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+    .activity-photo { width: 100%; border-radius: 6px; margin-top: 8px; }
+    .kitty-banner { background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
+    .kitty-label { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-bottom: 4px; }
+    .kitty-amount { font-size: 36px; font-weight: 700; }
+    .quote-challenge-box { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+    .quote-status { text-align: center; font-size: 14px; margin-bottom: 12px; opacity: 0.9; }
+    .quote-input { background: white; color: #000; padding: 16px; border-radius: 8px; font-size: 16px; text-align: center; border: none; width: 100%; margin-bottom: 12px; }
+    .quote-submitted { background: rgba(255,255,255,0.2); padding: 16px; border-radius: 8px; text-align: center; margin-bottom: 12px; }
+    .quote-result { padding: 12px; border-radius: 8px; text-align: center; font-weight: 600; margin-top: 12px; }
+    .quote-result.correct { background: #059669; }
+    .quote-result.incorrect { background: #dc2626; }
+    .duty-checklist { background: #1e293b; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+    .duty-item { display: flex; align-items: center; padding: 12px; margin-bottom: 8px; background: #0f172a; border-radius: 6px; }
+    .duty-checkbox { width: 24px; height: 24px; margin-right: 12px; cursor: pointer; }
+    .duty-text { flex: 1; font-size: 14px; }
+    .duty-item.checked { opacity: 0.5; }
+    .empty-state { text-align: center; padding: 40px 20px; color: #64748b; }
+    @media (max-width: 480px) { .header h1 { font-size: 20px; } .tab { font-size: 11px; padding: 12px 4px; min-width: 70px; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const firebaseConfig = {
+      apiKey: "AIzaSyBOXKNZupe6KYLqHS4DqGJnKGG0u4OI_N4",
+      authDomain: "eurotrash-2026.firebaseapp.com",
+      databaseURL: "https://eurotrash-2026-default-rtdb.firebaseio.com",
+      projectId: "eurotrash-2026",
+      storageBucket: "eurotrash-2026.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef123456"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const RIDERS = ['Terry', 'Steve', 'Derek', 'Mark', 'Ant', 'Charles'];
+    const RIDER_PINS = {
+      'Terry': '202',
+      'Steve': '347',
+      'Derek': '825',
+      'Mark': '691',
+      'Ant': '514',
+      'Charles': '738'
+    };
+    const PIN_CATEGORIES = {
+      positive: [
+        { id: 'borat', name: 'Borat - Very Nice', icon: '👍' }
+      ],
+      negative: [
+        { id: 'country-member', name: 'Country Member', icon: '🤠' },
+        { id: 'speeder', name: 'Speeder', icon: '🏍️' },
+        { id: 'dumbfuckery', name: 'Dumbfuckery', icon: '🫪' }
+      ]
+    };
+    const ASSISTANT_DUTIES = [
+      { id: 'whatsapp-location', text: 'Confirm all 6 riders have shared WhatsApp Live Location in Communications group', penalty: 5 },
+      { id: 'roll-call', text: 'Morning Roll Call - Check all badges', penalty: 5 },
+      { id: 'tally', text: 'Keep running tally of fines during day', penalty: 5 },
+      { id: 'photos', text: 'Ensure violation photos posted to WhatsApp', penalty: 5 },
+      { id: 'summary', text: 'Read daily summary at dinner', penalty: 5 },
+      { id: 'rituals', text: 'Lead humiliation rituals', penalty: 5 }
+    ];
+    const DEFAULT_QUOTES = [
+      "I gotta see the candy first. Then I get in the van. I'm not stupid.",
+      "Knowing better has never stopped me",
+      "The beatings will continue until morale improves",
+      "Stop screaming... I'm scared too",
+      "Bad decisions make good stories",
+      "Don't grow up - it's a trap",
+      "That's a terrible idea. When do we start?",
+      "In my defense I was left unsupervised",
+      "Well if it isn't the consequences of my own actions",
+      "I shaved my balls for this?",
+      "It could always be worse",
+      "If at first you don't succeed, try doing it the way I told you to"
+    ];
+    function App() {
+      const [activeTab, setActiveTab] = useState('leaderboard');
+      const [riders, setRiders] = useState({});
+      const [activities, setActivities] = useState([]);
+      const [kittyTotal, setKittyTotal] = useState(0);
+      const [dailyQuote, setDailyQuote] = useState(null);
+      const [assistantSupervisor, setAssistantSupervisor] = useState(null);
+      const [isAdmin, setIsAdmin] = useState(false);
+      const [showAdminLogin, setShowAdminLogin] = useState(false);
+      const [adminPin, setAdminPin] = useState('');
+      const [waRiders, setWaRiders] = useState({});
+      useEffect(() => { const saved = sessionStorage.getItem('pinsAdmin'); if (saved === 'true') setIsAdmin(true); }, []);
+      const handleAdminLogin = () => {
+        if (adminPin === '202') {
+          setIsAdmin(true);
+          sessionStorage.setItem('pinsAdmin', 'true');
+          setShowAdminLogin(false);
+          setAdminPin('');
+        } else {
+          alert('Incorrect PIN');
+          setAdminPin('');
+        }
+      };
+      const handleAdminLogout = () => { setIsAdmin(false); sessionStorage.removeItem('pinsAdmin'); };
+      useEffect(() => {
+        const ridersRef = db.ref('pins/riders');
+        ridersRef.once('value', (snapshot) => {
+          if (!snapshot.exists()) {
+            const initialRiders = {};
+            RIDERS.forEach(name => { initialRiders[name] = { name, fines: 0, credits: 0, pins: {}, violations: 0, awards: 0, assistantDays: 0 }; });
+            ridersRef.set(initialRiders);
+          }
+        });
+        ridersRef.on('value', (snapshot) => { setRiders(snapshot.val() || {}); });
+        const activitiesRef = db.ref('pins/activities');
+        activitiesRef.orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) { const arr = Object.keys(data).map(k => ({ id: k, ...data[k] })).sort((a,b) => b.timestamp - a.timestamp); setActivities(arr); }
+        });
+        db.ref('pins/kitty').on('value', (s) => setKittyTotal(s.val() || 0));
+        db.ref('pins/dailyQuote').on('value', (s) => setDailyQuote(s.val() || null));
+        db.ref('pins/assistantSupervisor').on('value', (s) => setAssistantSupervisor(s.val() || null));
+        db.ref('pins/assistantSupervisor/waRiders').on('value', (s) => setWaRiders(s.val() || {}));
+        return () => { ridersRef.off(); activitiesRef.off(); };
+      }, []);
+      const leaderboardData = Object.values(riders).sort((a,b) => b.fines - a.fines);
+      return (
+        <div className="app-container">
+          <div className="header">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h1>🏍️ EuroTrash Pins 2026</h1>
+                <p>May the odds be ever in your favor</p>
+              </div>
+              {isAdmin ? (
+                <button onClick={handleAdminLogout} style={{ background: '#059669', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '14px' }}>🔓 Admin</button>
+              ) : (
+                <button onClick={() => setShowAdminLogin(true)} style={{ background: '#64748b', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '14px' }}>🔒 Login</button>
+              )}
+            </div>
+          </div>
+          <div className="tabs">
+            {[['leaderboard','Board'],['quote','Quote'],['assistant','Assistant'],['report','Report'],['feed','Feed']].map(([id,label]) => (
+              <button key={id} className={`tab ${activeTab === id ? 'active' : ''}`} onClick={() => setActiveTab(id)}>{label}</button>
+            ))}
+          </div>
+          <div className="content">
+            {activeTab === 'leaderboard' && <LeaderboardTab riders={leaderboardData} kittyTotal={kittyTotal} assistantSupervisor={assistantSupervisor} isAdmin={isAdmin} waRiders={waRiders} />}
+            {activeTab === 'quote' && <QuoteTab dailyQuote={dailyQuote} riders={riders} isAdmin={isAdmin} />}
+            {activeTab === 'assistant' && <AssistantTab assistantSupervisor={assistantSupervisor} riders={riders} isAdmin={isAdmin} waRiders={waRiders} setWaRiders={setWaRiders} />}
+            {activeTab === 'report' && <ReportTab riders={riders} isAdmin={isAdmin} />}
+            {activeTab === 'feed' && <FeedTab activities={activities} isAdmin={isAdmin} />}
+          </div>
+          {showAdminLogin && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <div style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', maxWidth: '400px', width: '90%' }}>
+                <h2 style={{ marginBottom: '16px', fontSize: '20px' }}>Admin Login</h2>
+                <input type="number" inputMode="numeric" placeholder="Enter PIN" value={adminPin} onChange={(e) => setAdminPin(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
+                  style={{ width: '100%', padding: '12px', fontSize: '18px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: 'white', textAlign: 'center', letterSpacing: '4px', marginBottom: '16px' }} autoFocus />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={handleAdminLogin} style={{ flex: 1, padding: '12px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px' }}>Login</button>
+                  <button onClick={() => { setShowAdminLogin(false); setAdminPin(''); }} style={{ flex: 1, padding: '12px', background: '#475569', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px' }}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    function LeaderboardTab({ riders, kittyTotal, assistantSupervisor, isAdmin, waRiders }) {
+      const waCount = RIDERS.filter(r => waRiders[r]).length;
+      const waAll = waCount === RIDERS.length;
+      return (
+        <>
+          <div className="kitty-banner">
+            <div className="kitty-label">Total Kitty</div>
+            <div className="kitty-amount">€{kittyTotal}</div>
+          </div>
+          <div style={{ background: waAll ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.12)', border: '2px solid ' + (waAll ? 'rgba(22,163,74,0.5)' : 'rgba(220,38,38,0.4)'), borderRadius: '12px', padding: '12px 14px', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontWeight: '700', fontSize: '14px', color: waAll ? '#4ade80' : '#fca5a5' }}>
+                📍 WhatsApp Location {waAll ? '— All Confirmed ✓' : '— ' + waCount + ' / ' + RIDERS.length + ' Confirmed'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {RIDERS.map(r => (
+                <span key={r} style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', background: waRiders[r] ? 'rgba(22,163,74,0.25)' : 'rgba(220,38,38,0.25)', color: waRiders[r] ? '#4ade80' : '#fca5a5', border: '1px solid ' + (waRiders[r] ? 'rgba(22,163,74,0.5)' : 'rgba(220,38,38,0.4)') }}>
+                  {waRiders[r] ? '✓' : '✗'} {r}
+                </span>
+              ))}
+            </div>
+          </div>
+          {riders.length === 0 ? (
+            <div className="empty-state"><div>No violations yet... suspiciously quiet</div></div>
+          ) : (
+            riders.map((rider, index) => {
+              const isAssistant = assistantSupervisor?.name === rider.name;
+              const balance = (rider.fines || 0) - (rider.credits || 0);
+              return (
+                <div key={rider.name} className={`leaderboard-item ${isAssistant ? 'assistant' : ''}`}>
+                  <div className="rank">#{index + 1}</div>
+                  <div className="rider-info">
+                    <div className="rider-name">{rider.name}{isAssistant && <span className="assistant-badge">💩 Assistant</span>}</div>
+                    <div className="rider-stats">
+                      {[['👍',rider.awards||0,'#10b981'],['🤠',rider.country||0,'#ef4444'],['🏍️',rider.speeder||0,'#ef4444'],['🫪',rider.dumbfuckery||0,'#ef4444'],['👆',rider.quotesCorrect||0,'#10b981'],['👇',rider.quotesWrong||0,'#ef4444'],['💩',rider.assistantDays||0,'#3b82f6']].map(([icon,val,bg],i) => (
+                        <span key={i} style={{ display: 'inline-block', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', marginRight: '6px', background: bg, color: 'white' }}>{icon} {val}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: balance > 0 ? '#ef4444' : balance < 0 ? '#059669' : '#ffffff' }}>€{Math.abs(balance)}</div>
+                    {balance > 0 && <div style={{ fontSize: '11px', color: '#ef4444' }}>In Debit</div>}
+                    {balance < 0 && <div style={{ fontSize: '11px', color: '#059669' }}>In Credit</div>}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </>
+      );
+    }
+    function QuoteTab({ dailyQuote, riders, isAdmin }) {
+      const [myName, setMyName] = useState('');
+      const [myPin, setMyPin] = useState('');
+      const [quoteInput, setQuoteInput] = useState('');
+      const [submitting, setSubmitting] = useState(false);
+      const [selectedQuote, setSelectedQuote] = useState('');
+      const [customQuote, setCustomQuote] = useState('');
+      const [showAddQuote, setShowAddQuote] = useState(false);
+      const [quoteList, setQuoteList] = useState([]);
+      const [quoteUsage, setQuoteUsage] = useState({});
+      const today = new Date().toISOString().split('T')[0];
+      const isToday = dailyQuote?.date === today;
+      const mySubmission = dailyQuote?.submissions?.[myName];
+      const hasSubmitted = !!mySubmission;
+      useEffect(() => {
+        const quotesRef = db.ref('pins/quoteList');
+        quotesRef.once('value', (snapshot) => {
+          if (!snapshot.exists()) { quotesRef.set(DEFAULT_QUOTES); setQuoteList(DEFAULT_QUOTES); }
+          else { setQuoteList(snapshot.val()); }
+        });
+        quotesRef.on('value', (s) => setQuoteList(s.val() || []));
+        db.ref('pins/quoteUsage').on('value', (s) => setQuoteUsage(s.val() || {}));
+        return () => { quotesRef.off(); };
+      }, []);
+      const handleSubmitQuote = async () => {
+        if (!myName || !quoteInput.trim()) { alert('Please enter your name and the quote'); return; }
+        if (myPin !== RIDER_PINS[myName]) { alert('Incorrect PIN. Try again.'); setMyPin(''); return; }
+        setSubmitting(true);
+        try {
+          await db.ref(`pins/dailyQuote/submissions/${myName}`).set({ quote: quoteInput.trim(), timestamp: Date.now() });
+          alert('Quote submitted! You cannot change it now.');
+          setQuoteInput(''); setMyName(''); setMyPin('');
+        } catch(e) { alert('Error submitting quote'); }
+        finally { setSubmitting(false); }
+      };
+      const handleSetDailyQuote = async () => {
+        const quoteToSet = selectedQuote === 'custom' ? customQuote.trim() : selectedQuote;
+        if (!quoteToSet) { alert('Please select or enter a quote'); return; }
+        try {
+          await db.ref('pins/dailyQuote').set({ date: today, correctQuote: quoteToSet, timestamp: Date.now(), submissions: {} });
+          alert('Daily quote set!');
+          setSelectedQuote(''); setCustomQuote('');
+        } catch(e) { alert('Error setting quote'); }
+      };
+      const handleAddQuote = async () => {
+        if (!customQuote.trim()) { alert('Please enter a quote'); return; }
+        try {
+          await db.ref('pins/quoteList').set([...quoteList, customQuote.trim()]);
+          alert('Quote added!'); setCustomQuote(''); setShowAddQuote(false);
+        } catch(e) { alert('Error adding quote'); }
+      };
+      const handleScoreQuotes = async () => {
+        if (!dailyQuote || !dailyQuote.correctQuote) return;
+        try {
+          const submissions = dailyQuote.submissions || {};
+          let finesAdded = 0;
+          const normalize = (str) => str.toLowerCase().replace(/[''']/g,'').replace(/["""]/g,'').replace(/[.,;:!?—–-]/g,'').replace(/\s+/g,' ').trim();
+          const correctNormalized = normalize(dailyQuote.correctQuote);
+          for (const [name, submission] of Object.entries(submissions)) {
+            const submissionNormalized = normalize(submission.quote);
+            const isCorrect = submissionNormalized === correctNormalized || (submissionNormalized.length >= correctNormalized.length * 0.9 && correctNormalized.includes(submissionNormalized));
+            await db.ref(`pins/dailyQuote/submissions/${name}/correct`).set(isCorrect);
+            const riderRef = db.ref(`pins/riders/${name}`);
+            const riderData = (await riderRef.once('value')).val();
+            if (!isCorrect) {
+              await riderRef.update({ fines: (riderData.fines || 0) + 5, violations: (riderData.violations || 0) + 1, quotesWrong: (riderData.quotesWrong || 0) + 1 });
+              finesAdded += 5;
+              await db.ref('pins/activities').push().set({ type: 'violation', rider: name, pin: 'quote-challenge', fine: 5, description: `Failed Daily Quote Challenge. Said: "${submission.quote}"`, timestamp: Date.now() });
+            } else {
+              await riderRef.update({ quotesCorrect: (riderData.quotesCorrect || 0) + 1 });
+            }
+          }
+          if (finesAdded > 0) {
+            const kittySnap = await db.ref('pins/kitty').once('value');
+            await db.ref('pins/kitty').set((kittySnap.val() || 0) + finesAdded);
+          }
+          alert('Quotes scored!');
+        } catch(e) { alert('Error scoring quotes'); }
+      };
+      if (isAdmin) {
+        return (
+          <div className="card">
+            <h2 style={{ marginBottom: '16px' }}>Set Daily Quote (Admin)</h2>
+            {!showAddQuote ? (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Select Quote</label>
+                  <select className="form-select" value={selectedQuote} onChange={(e) => setSelectedQuote(e.target.value)}>
+                    <option value="">-- Select a quote --</option>
+                    {quoteList.sort().map((q,i) => <option key={i} value={q}>{q.length > 50 ? q.substring(0,50)+'...' : q}</option>)}
+                    <option value="custom">-- Type custom quote --</option>
+                  </select>
+                </div>
+                {selectedQuote === 'custom' && (
+                  <div className="form-group">
+                    <label className="form-label">Custom Quote</label>
+                    <input type="text" className="form-input" value={customQuote} onChange={(e) => setCustomQuote(e.target.value)} placeholder="Enter exact quote" />
+                  </div>
+                )}
+                <button className="btn btn-primary" onClick={handleSetDailyQuote}>Set Quote for Today</button>
+                <button className="btn btn-secondary" onClick={() => setShowAddQuote(true)} style={{ marginTop: '8px' }}>Add New Quote to List</button>
+                {dailyQuote?.correctQuote && (
+                  <>
+                    <div style={{ marginTop: '24px', padding: '12px', background: '#0f172a', borderRadius: '8px' }}>
+                      <h3 style={{ fontSize: '16px', marginBottom: '12px', color: '#10b981' }}>Today's Quote: {dailyQuote.correctQuote}</h3>
+                      {dailyQuote.submissions && Object.entries(dailyQuote.submissions).map(([name, sub]) => (
+                        <div key={name} style={{ padding: '8px', background: '#1e293b', borderRadius: '6px', marginBottom: '6px', borderLeft: sub.correct === true ? '3px solid #10b981' : sub.correct === false ? '3px solid #ef4444' : '3px solid #64748b' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>{name} {sub.correct === true && '✅'}{sub.correct === false && '❌'}{sub.correct === undefined && '⏳'}</div>
+                          <div style={{ fontSize: '13px', color: '#94a3b8' }}>{sub.quote}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <button className="btn btn-primary" onClick={handleScoreQuotes} style={{ marginTop: '16px', width: '100%' }}>Score All Quotes (Admin)</button>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label className="form-label">New Quote to Add</label>
+                  <input type="text" className="form-input" value={customQuote} onChange={(e) => setCustomQuote(e.target.value)} placeholder="Enter new quote" />
+                </div>
+                <button className="btn btn-success" onClick={handleAddQuote}>Add to Quote List</button>
+                <button className="btn btn-secondary" onClick={() => { setShowAddQuote(false); setCustomQuote(''); }} style={{ marginTop: '8px' }}>Cancel</button>
+              </>
+            )}
+          </div>
+        );
+      }
+      return (
+        <>
+          <div className="quote-challenge-box">
+            <div className="quote-status">
+              {!isToday ? "⏳ Waiting for today's quote challenge" : hasSubmitted ? '✅ Quote submitted' : '📝 Submit your quote'}
+            </div>
+            {isToday && !hasSubmitted && (
+              <>
+                <select className="form-select" value={myName} onChange={(e) => setMyName(e.target.value)} style={{ background: 'white', color: '#000', marginBottom: '12px' }}>
+                  <option value="">Select your name</option>
+                  {RIDERS.map(n => <option key={n}>{n}</option>)}
+                </select>
+                <input type="number" className="form-input" value={myPin} onChange={(e) => setMyPin(e.target.value)} placeholder="Enter your 3-digit PIN" maxLength="3" inputMode="numeric"
+                  style={{ background: 'white', color: '#000', marginBottom: '12px', textAlign: 'center', fontSize: '18px', letterSpacing: '8px' }} />
+                <textarea className="quote-input" value={quoteInput} onChange={(e) => setQuoteInput(e.target.value)} placeholder="What was on Terry's tank bag?" rows="3" style={{ minHeight: '80px', resize: 'vertical' }} />
+                <button className="btn btn-primary" onClick={handleSubmitQuote} disabled={submitting || !myName || !myPin}>{submitting ? 'Submitting...' : 'Lock In Answer'}</button>
+                <div style={{ fontSize: '12px', textAlign: 'center', opacity: 0.8 }}>⚠️ Cannot change after submitting!</div>
+              </>
+            )}
+            {isToday && hasSubmitted && (
+              <div className="quote-submitted">
+                <div style={{ marginBottom: '8px', fontSize: '14px', opacity: 0.9 }}>Your answer:</div>
+                <div style={{ fontSize: '18px', fontWeight: '600' }}>{mySubmission.quote}</div>
+                {mySubmission.correct !== undefined && (
+                  <div className={`quote-result ${mySubmission.correct ? 'correct' : 'incorrect'}`}>
+                    {mySubmission.correct ? '✅ CORRECT!' : '❌ INCORRECT - €5 fine'}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      );
+    }
+    function AssistantTab({ assistantSupervisor, riders, isAdmin, waRiders, setWaRiders }) {
+      const [completedDuties, setCompletedDuties] = useState({});
+      const [manualSelection, setManualSelection] = useState('');
+      
+      useEffect(() => {
+        if (assistantSupervisor) {
+          const dutiesRef = db.ref(`pins/assistantSupervisor/completedDuties`);
+          dutiesRef.on('value', (snapshot) => {
+            setCompletedDuties(snapshot.val() || {});
+          });
+          return () => { dutiesRef.off(); };
+        }
+      }, [assistantSupervisor]);
+      const handleWaFine = async (rider) => {
+        try {
+          const riderRef = db.ref('pins/riders/' + rider);
+          const snap = await riderRef.once('value');
+          const riderData = snap.val() || { fines: 0, violations: 0 };
+          await riderRef.update({ fines: (riderData.fines || 0) + 5, violations: (riderData.violations || 0) + 1 });
+          const kittySnap = await db.ref('pins/kitty').once('value');
+          await db.ref('pins/kitty').set((kittySnap.val() || 0) + 5);
+          await db.ref('pins/activities').push().set({ type: 'violation', rider: rider, pin: 'whatsapp-location', fine: 5, description: rider + ' did not share WhatsApp Live Location before departure', timestamp: Date.now() });
+          alert('€5 fine logged for ' + rider);
+        } catch(e) { alert('Error: ' + e.message); }
+      };
+      const toggleWaRider = async (rider) => {
+        const updated = Object.assign({}, waRiders);
+        updated[rider] = !waRiders[rider];
+        await db.ref('pins/assistantSupervisor/waRiders').set(updated);
+      };
+      const handleToggleDuty = async (dutyId) => {
+        if (!assistantSupervisor) return;
+        await db.ref(`pins/assistantSupervisor/completedDuties/${dutyId}`).set(!completedDuties[dutyId]);
+      };
+      const handleMissedDuty = async (duty) => {
+        if (!assistantSupervisor) return;
+        const name = assistantSupervisor.name;
+        try {
+          const riderRef = db.ref(`pins/riders/${name}`);
+          const riderData = (await riderRef.once('value')).val();
+          await riderRef.update({ fines: (riderData.fines || 0) + duty.penalty });
+          const kittySnap = await db.ref('pins/kitty').once('value');
+          await db.ref('pins/kitty').set((kittySnap.val() || 0) + duty.penalty);
+          await db.ref('pins/activities').push().set({ type: 'violation', rider: name, pin: 'assistant-duty', fine: duty.penalty, description: `Missed Assistant Supervisor duty: ${duty.text}`, timestamp: Date.now() });
+          alert(`€${duty.penalty} fine added for missed duty`);
+        } catch(e) { alert('Error adding fine'); }
+      };
+      const handleSetAssistant = async (selectedName = null) => {
+        const ridersList = Object.values(riders);
+        if (ridersList.length === 0) return;
+        let newAssistant;
+        if (selectedName) { newAssistant = ridersList.find(r => r.name === selectedName); }
+        else { const sorted = [...ridersList].sort((a,b) => b.fines - a.fines); newAssistant = sorted[0]; }
+        if (!newAssistant) return;
+        await db.ref('pins/assistantSupervisor').set({ name: newAssistant.name, date: new Date().toISOString().split('T')[0], completedDuties: {} });
+        await db.ref(`pins/riders/${newAssistant.name}/assistantDays`).set((newAssistant.assistantDays || 0) + 1);
+        setManualSelection('');
+        alert(`${newAssistant.name} is now Assistant Supervisor!`);
+      };
+      if (!assistantSupervisor) {
+        return (
+          <div className="card">
+            <h2 style={{ marginBottom: '16px' }}>Daily Assistant Supervisor</h2>
+            <p style={{ marginBottom: '16px', color: '#94a3b8' }}>No assistant supervisor assigned yet.</p>
+            {!isAdmin ? (
+              <div style={{ background: '#475569', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
+                <p style={{ margin: 0, color: '#cbd5e1' }}>🔒 Admin login required to assign Assistant</p>
+              </div>
+            ) : (
+              <>
+                <button className="btn btn-primary" onClick={() => handleSetAssistant()}>Auto: Set Assistant (Most Fined)</button>
+                <div style={{ borderTop: '1px solid #334155', paddingTop: '16px', marginTop: '16px' }}>
+                  <label className="form-label">Or manually select:</label>
+                  <select className="form-select" value={manualSelection} onChange={(e) => setManualSelection(e.target.value)} style={{ marginBottom: '12px' }}>
+                    <option value="">-- Select rider --</option>
+                    {RIDERS.map(n => <option key={n}>{n}</option>)}
+                  </select>
+                  <button className="btn btn-secondary" onClick={() => handleSetAssistant(manualSelection)} disabled={!manualSelection}>Set Selected as Assistant</button>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      }
+      return (
+        <>
+          <div className="card" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#000' }}>
+            <h2 style={{ marginBottom: '8px' }}>💩 Shit Show Assistant Supervisor</h2>
+            <div style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px' }}>{assistantSupervisor.name}</div>
+            <div style={{ fontSize: '14px', opacity: 0.8 }}>{new Date(assistantSupervisor.date).toLocaleDateString()}</div>
+            {isAdmin && (
+              <button className="btn btn-secondary" onClick={async () => { if (confirm('Reset Assistant for a new day?')) { await db.ref('pins/assistantSupervisor').remove(); } }} style={{ marginTop: '12px', background: '#dc2626', width: '100%' }}>Reset Assistant (Admin)</button>
+            )}
+          </div>
+                <div style={{ background: 'rgba(37,211,102,0.12)', border: '2px solid rgba(37,211,102,0.4)', borderRadius: '12px', padding: '14px', marginBottom: '12px' }}>
+          <div style={{ color: '#4ade80', fontWeight: '700', fontSize: '15px', marginBottom: '4px' }}>
+            📍 WhatsApp Live Location — COMPULSORY BEFORE DEPARTURE
+          </div>
+          <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '10px' }}>
+            Open Communications group. Confirm all 6 rider pins are live on the map. Tick each one. Missing = €5 fine.
+          </div>
+          {RIDERS.map(rider => (
+            <div key={rider} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <span style={{ fontSize: '14px', fontWeight: '600' }}>{rider}</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {isAdmin && !waRiders[rider] && (
+                  <button style={{ padding: '5px 10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                    onClick={() => handleWaFine(rider)}>
+                    Not Shared — €5
+                  </button>
+                )}
+                <div onClick={() => isAdmin && toggleWaRider(rider)}
+                  style={{ width: '26px', height: '26px', borderRadius: '6px', border: waRiders[rider] ? 'none' : '2px solid rgba(255,255,255,0.3)', background: waRiders[rider] ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isAdmin ? 'pointer' : 'default' }}>
+                  {waRiders[rider] && <span style={{ color: '#fff', fontSize: '14px' }}>✓</span>}
+                </div>
+              </div>
+            </div>
+          ))}
+          {RIDERS.every(r => waRiders[r]) && (
+            <div style={{ color: '#4ade80', fontWeight: '700', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>
+              ✓ All 6 confirmed — clear to ride
+            </div>
+          )}
+        </div>
+  <div className="duty-checklist">
+            <h3 style={{ marginBottom: '12px' }}>Daily Duties (€5 fine each if missed)</h3>
+            {!isAdmin && <div style={{ padding: '12px', background: 'rgba(251,191,36,0.1)', borderRadius: '6px', marginBottom: '12px', fontSize: '13px', color: '#fbbf24' }}>ℹ️ Only Terry can check off duties</div>}
+            {ASSISTANT_DUTIES.map(duty => (
+              <div key={duty.id} className={`duty-item ${completedDuties[duty.id] ? 'checked' : ''}`}>
+                <input type="checkbox" className="duty-checkbox" checked={completedDuties[duty.id] || false} onChange={() => handleToggleDuty(duty.id)} disabled={!isAdmin} style={{ cursor: isAdmin ? 'pointer' : 'not-allowed', opacity: isAdmin ? 1 : 0.5 }} />
+                <div className="duty-text">{duty.text}</div>
+                {isAdmin && (
+                  <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '12px', width: 'auto', marginLeft: '8px', marginBottom: 0 }} onClick={() => handleMissedDuty(duty)}>Missed</button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 style={{ marginBottom: '12px' }}>Perks (Following Day)</h3>
+            <div style={{ fontSize: '14px', color: '#94a3b8', lineHeight: '1.6' }}>
+              ✅ Choice of Room Buddy for tomorrow's lodgings<br/>
+              ✅ Group buys you lunch tomorrow<br/>
+              ✅ First pint at next evening stop<br/>
+              ✅ One photo exemption tomorrow<br/>
+              ✅ Best Hotel parking spot tomorrow<br/>
+              ✅ €5 reward if all Daily Duties completed
+            </div>
+          </div>
+          {isAdmin && (
+            <button className="btn btn-secondary" onClick={async () => { if (confirm('Reset Assistant for a new day?')) { await db.ref('pins/assistantSupervisor').remove(); } }} style={{ background: '#dc2626' }}>Reset Assistant for New Day (Admin)</button>
+          )}
+        </>
+      );
+    }
+    function ReportTab({ riders, isAdmin }) {
+      const [selectedRider, setSelectedRider] = useState('');
+      const [category, setCategory] = useState('');
+      const [selectedPin, setSelectedPin] = useState('');
+      const [description, setDescription] = useState('');
+      const [uploading, setUploading] = useState(false);
+      const [reportedBy, setReportedBy] = useState('');
+      const [dailyBorat, setDailyBorat] = useState(null);
+      const [boratSelection, setBoratSelection] = useState('');
+      const [pending, setPending] = useState([]);
+      useEffect(() => {
+        db.ref('pins/dailyBorat').on('value', (s) => setDailyBorat(s.val()));
+        db.ref('pins/pending').on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) { setPending(Object.entries(data).map(([id,item]) => ({id,...item})).filter(p => p.status === 'pending')); }
+          else { setPending([]); }
+        });
+        return () => {};
+      }, []);
+      const handleAssignBorat = async () => {
+        if (!boratSelection) { alert('Please select a rider'); return; }
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const riderRef = db.ref(`pins/riders/${boratSelection}`);
+          const riderData = (await riderRef.once('value')).val();
+          await riderRef.update({ credits: (riderData.credits || 0) + 5, awards: (riderData.awards || 0) + 1 });
+          const kittySnap = await db.ref('pins/kitty').once('value');
+          await db.ref('pins/kitty').set(Math.max(0, (kittySnap.val() || 0) - 5));
+          await db.ref('pins/dailyBorat').set({ name: boratSelection, date: today, timestamp: Date.now() });
+          await db.ref('pins/activities').push().set({ type: 'award', rider: boratSelection, pin: 'borat', fine: 0, description: 'Daily Borat Award - €5 credit earned', timestamp: Date.now() });
+          setBoratSelection('');
+          alert(`${boratSelection} receives today's Borat! 🏆`);
+        } catch(e) { alert('Error assigning Borat'); }
+      };
+      const handleSubmit = async () => {
+        if (!selectedRider || !selectedPin || !reportedBy) { alert('Please fill in all required fields'); return; }
+        setUploading(true);
+        try {
+          const isPositive = category === 'positive';
+          const fineAmount = isPositive ? 0 : 5;
+          if (isAdmin) {
+            await db.ref('pins/activities').push().set({ type: isPositive ? 'award' : 'violation', rider: selectedRider, pin: selectedPin, fine: fineAmount, description, reportedBy, timestamp: Date.now() });
+            const riderRef = db.ref(`pins/riders/${selectedRider}`);
+            const riderData = (await riderRef.once('value')).val();
+            const updates = { violations: (riderData.violations || 0) + (isPositive ? 0 : 1), [`pins/${selectedPin}`]: (riderData.pins?.[selectedPin] || 0) + 1 };
+            if (isPositive) { updates.credits = (riderData.credits || 0) + 5; updates.awards = (riderData.awards || 0) + 1; }
+            else {
+              updates.fines = (riderData.fines || 0) + fineAmount;
+              if (selectedPin === 'speeder') updates.speeder = (riderData.speeder || 0) + 1;
+              else if (selectedPin === 'country-member') updates.country = (riderData.country || 0) + 1;
+              else if (selectedPin === 'dumbfuckery') updates.dumbfuckery = (riderData.dumbfuckery || 0) + 1;
+            }
+            await riderRef.update(updates);
+            const kittySnap = await db.ref('pins/kitty').once('value');
+            await db.ref('pins/kitty').set(isPositive ? Math.max(0,(kittySnap.val()||0)-5) : (kittySnap.val()||0)+fineAmount);
+            alert(isPositive ? 'Award given! 🏆' : 'Violation reported!');
+          } else {
+            await db.ref('pins/pending').push().set({ type: isPositive ? 'award' : 'violation', rider: selectedRider, pin: selectedPin, fine: fineAmount, description, reportedBy, timestamp: Date.now(), status: 'pending' });
+            alert("Nomination submitted! Waiting for Terry's approval");
+          }
+          setSelectedRider(''); setCategory(''); setSelectedPin(''); setDescription(''); setReportedBy('');
+        } catch(e) { alert('Error submitting'); }
+        finally { setUploading(false); }
+      };
+      const handleApprovePending = async (item) => {
+        try {
+          const isPositive = item.type === 'award';
+          await db.ref('pins/activities').push().set({ type: item.type, rider: item.rider, pin: item.pin, fine: item.fine, description: item.description, reportedBy: item.reportedBy, timestamp: Date.now() });
+          const riderRef = db.ref(`pins/riders/${item.rider}`);
+          const riderData = (await riderRef.once('value')).val();
+          const updates = { violations: (riderData.violations || 0) + (isPositive ? 0 : 1), [`pins/${item.pin}`]: (riderData.pins?.[item.pin] || 0) + 1 };
+          if (isPositive) { updates.credits = (riderData.credits || 0) + 5; updates.awards = (riderData.awards || 0) + 1; }
+          else { updates.fines = (riderData.fines || 0) + item.fine; if (item.pin === 'speeder') updates.speeder = (riderData.speeder||0)+1; else if (item.pin === 'country-member') updates.country = (riderData.country||0)+1; else if (item.pin === 'dumbfuckery') updates.dumbfuckery = (riderData.dumbfuckery||0)+1; }
+          await riderRef.update(updates);
+          const kittySnap = await db.ref('pins/kitty').once('value');
+          await db.ref('pins/kitty').set(isPositive ? Math.max(0,(kittySnap.val()||0)-5) : (kittySnap.val()||0)+item.fine);
+          await db.ref(`pins/pending/${item.id}`).remove();
+          alert('Approved! ✅');
+        } catch(e) { alert('Error approving'); }
+      };
+      const handleRejectPending = async (item) => {
+        if (!confirm('Reject this nomination?')) return;
+        await db.ref(`pins/pending/${item.id}`).remove();
+      };
+      const availablePins = category === 'positive' ? PIN_CATEGORIES.positive : category === 'negative' ? PIN_CATEGORIES.negative : [];
+      const today = new Date().toISOString().split('T')[0];
+      const isBoratToday = dailyBorat?.date === today;
+      return (
+        <>
+          {isAdmin && pending.length > 0 && (
+            <div className="card" style={{ background: '#7c3aed', color: 'white', marginBottom: '16px' }}>
+              <h2 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '700' }}>⏳ Pending Approvals ({pending.length})</h2>
+              {pending.map(item => {
+                const allPins = [...PIN_CATEGORIES.positive, ...PIN_CATEGORIES.negative];
+                const pin = allPins.find(p => p.id === item.pin);
+                return (
+                  <div key={item.id} style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>{item.type === 'award' ? '🏆' : '⚠️'} {item.rider}</div>
+                    <div style={{ fontSize: '14px', opacity: 0.9 }}>{pin?.icon} {pin?.name || item.pin}{item.type !== 'award' && ` • €${item.fine}`}</div>
+                    {item.description && <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px' }}>{item.description}</div>}
+                    <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>Reported by {item.reportedBy}</div>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button className="btn btn-success" style={{ flex: 1, padding: '8px' }} onClick={() => handleApprovePending(item)}>✅ Approve</button>
+                      <button className="btn btn-danger" style={{ flex: 1, padding: '8px' }} onClick={() => handleRejectPending(item)}>❌ Reject</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="card" style={{ background: isBoratToday ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#000', marginBottom: '16px' }}>
+            <h2 style={{ marginBottom: '12px', fontSize: '18px', fontWeight: '700' }}>👍 Daily Borat Award</h2>
+            {isBoratToday ? (
+              <><div style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px' }}>🏆 {dailyBorat.name}</div><div style={{ fontSize: '14px', opacity: 0.8 }}>Very Nice! €5 credit earned</div></>
+            ) : !isAdmin ? (
+              <div style={{ padding: '16px', textAlign: 'center' }}><p style={{ margin: 0, opacity: 0.9 }}>🔒 Admin login required to award Borat</p></div>
+            ) : (
+              <>
+                <p style={{ marginBottom: '12px', fontSize: '14px', opacity: 0.9 }}>⚠️ Mandatory: One rider MUST receive Borat today</p>
+                <select className="form-select" value={boratSelection} onChange={(e) => setBoratSelection(e.target.value)} style={{ marginBottom: '12px', background: 'white', color: '#000' }}>
+                  <option value="">-- Select who deserves Borat --</option>
+                  {RIDERS.map(n => <option key={n}>{n}</option>)}
+                </select>
+                <button className="btn btn-primary" onClick={handleAssignBorat} disabled={!boratSelection} style={{ background: '#059669', border: 'none', opacity: boratSelection ? 1 : 0.5 }}>Award Borat (€5 Credit)</button>
+              </>
+            )}
+          </div>
+          <div className="card">
+            <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>{isAdmin ? 'Report Violation or Award' : 'Nominate Violation or Award'}</h2>
+            <div className="form-group">
+              <label className="form-label">Your Name *</label>
+              <select className="form-select" value={reportedBy} onChange={(e) => setReportedBy(e.target.value)}>
+                <option value="">Select your name</option>
+                {RIDERS.map(n => <option key={n}>{n}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Offender *</label>
+              <select className="form-select" value={selectedRider} onChange={(e) => setSelectedRider(e.target.value)}>
+                <option value="">Select rider</option>
+                {RIDERS.map(n => <option key={n}>{n}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Category *</label>
+              <select className="form-select" value={category} onChange={(e) => { setCategory(e.target.value); setSelectedPin(''); }}>
+                <option value="">Select category</option>
+                <option value="positive">Positive (Borat)</option>
+                <option value="negative">Negative (Violations)</option>
+              </select>
+            </div>
+            {category && (
+              <div className="form-group">
+                <label className="form-label">Pin Type *</label>
+                <select className="form-select" value={selectedPin} onChange={(e) => setSelectedPin(e.target.value)}>
+                  <option value="">Select pin</option>
+                  {availablePins.map(pin => <option key={pin.id} value={pin.id}>{pin.icon} {pin.name}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="form-group">
+              <label className="form-label">Description</label>
+              <textarea className="form-textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What happened?" />
+            </div>
+            <button className="btn btn-primary" onClick={handleSubmit} disabled={uploading}>{uploading ? 'Submitting...' : (isAdmin ? 'Submit & Approve Immediately' : 'Submit for Approval')}</button>
+          </div>
+        </>
+      );
+    }
+    function FeedTab({ activities, isAdmin }) {
+      const formatTime = (ts) => {
+        const date = new Date(ts);
+        const diffMins = Math.floor((Date.now() - ts) / 60000);
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffMins < 1440) return `${Math.floor(diffMins/60)}h ago`;
+        return `${Math.floor(diffMins/1440)}d ago`;
+      };
+      const allPins = [...PIN_CATEGORIES.positive, ...PIN_CATEGORIES.negative];
+      if (activities.length === 0) return <div className="empty-state"><div>No activity yet</div></div>;
+      return (
+        <>
+          {activities.map(activity => {
+            const pin = allPins.find(p => p.id === activity.pin);
+            const isAward = activity.type === 'award';
+            let pinName = pin ? `${pin.icon} ${pin.name}` : activity.pin;
+            if (activity.pin === 'quote-challenge') pinName = '📝 Quote Challenge';
+            if (activity.pin === 'assistant-duty') pinName = '💩 Assistant Duty';
+            if (activity.pin === 'whatsapp-location') pinName = '📍 WhatsApp Location';
+            return (
+              <div key={activity.id} className={`activity-item ${activity.type}`}>
+                <div className="activity-header">
+                  <div className="activity-type">{isAward ? '🏆' : '⚠️'} {activity.rider}</div>
+                  <div className="activity-time">{formatTime(activity.timestamp)}</div>
+                </div>
+                <div className="activity-description">
+                  <strong>{pinName}</strong>
+                  {activity.fine > 0 && ` • €${activity.fine}`}
+                  {activity.description && <div style={{ marginTop: '6px', color: '#cbd5e1' }}>{activity.description}</div>}
+                  {activity.reportedBy && <div style={{ marginTop: '6px', fontSize: '12px', color: '#64748b' }}>Reported by {activity.reportedBy}</div>}
+                </div>
+                {activity.photoURL && <img src={activity.photoURL} alt="Evidence" className="activity-photo" />}
+              </div>
+            );
+          })}
+        </>
+      );
+    }
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
