@@ -800,5 +800,10 @@
     }
     ReactDOM.render(<App />, document.getElementById('root'));
   </script>
+  <script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/pins/sw.js', {scope: '/pins/'});
+}
+</script>
 </body>
 </html>
